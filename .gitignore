@@ -12,3 +12,6 @@ dist/
 
 # Uploaded files (staff documents, NSS forms and photos)
 apps/web/storage/
+
+# Logs and uploads when run from a plain git clone (see ecosystem.config.cjs)
+.shared/

@@ -168,6 +168,8 @@ export function startScheduler() {
   if (globalJobs.__hrmsScheduler) clearInterval(globalJobs.__hrmsScheduler)
   globalJobs.__hrmsScheduler = undefined
   if (process.env.SCHEDULER_ENABLED !== 'true') return
+  // Under PM2 cluster mode every worker loads the app; only the first runs the jobs.
+  if (process.env.NODE_APP_INSTANCE && process.env.NODE_APP_INSTANCE !== '0') return
   const safeTick = () => void tick().catch((err) => console.error('[jobs] scheduler tick failed:', err))
   globalJobs.__hrmsScheduler = setInterval(safeTick, 60_000)
   setTimeout(safeTick, 5_000)
