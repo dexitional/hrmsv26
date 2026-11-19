@@ -1,0 +1,3 @@
+ALTER TABLE job
+  ADD COLUMN merged_into INT NULL,
+  ADD COLUMN merged_at DATETIME NULL;

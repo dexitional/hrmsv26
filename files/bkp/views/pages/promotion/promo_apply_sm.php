@@ -1,0 +1,1538 @@
+<?php
+// var_dump($current_rank[0]['title']);
+// die();
+?>
+<?php //echo $stdata_promo[0]['status'] . ' ' . $stdata_promo[0]['stage_status']
+// var_dump($stdata_promo);
+// die();
+?>
+
+<!-- Staff Profile -->
+
+<div class="row vertical-modern-dashboard">
+    <div class="col s12 m12 l12">
+        <div class="animate fadeRight">
+            <div class="card-content pb-1">
+                <div class="col s12 m12 l12">
+                    <iframe style="width:100%; height:400px;" src="https://www.youtube.com/embed/EY2qBpKF0Ag">
+                    </iframe>
+                </div>
+                <form class="col s12 m12 l12" action="" method="post" name="postform" id="frmFileUpload">
+
+
+                    <!-- <div class="row">
+                        <div class="col s12 m6 l6"> -->
+
+                    <div class="card">
+                        <marquee behavior="left" direction=""><h5>For enquires call or whatsapp: 0203556742 </h5></marquee>
+                                            
+                        <?php if ((!empty($stdata_promo[0]['status']) && $stdata_promo[0]['status'] != 1 && $stdata_promo[0]['status'] != 7 && $stdata_promo[0]['returned'] == 1) || (!empty($stdata_promo[0]['stage_status']) && $stdata_promo[0]['stage_status'] >= 8 && $stdata_promo[0]['status'] != 1 && $stdata_promo[0]['returned'] == 1)) : ?>
+                            <input type="hidden" name="promo_id" value="<?= $stdata_promo[0]['promotion_id']; ?>" id="promo_id">
+                            <input type="hidden" name="promo_stage" value="<?= $stdata_promo[0]['promo_status'].','.$stdata_promo[0]['stage_status']; ?>" id="promo_stage">
+                            <input type="hidden" name="apply_type" id="apply_type" value='0'>
+                            <input type="hidden" name="apply_return" id="apply_return" value='<?=$stdata_promo[0]['returned'] ?>'>
+                            <div class="card-content pb-1">
+                                <div style="text-align:center;">
+                                    <p><b>UNIVERSITY OF CAPE COAST</b></p>
+                                    <!-- <p>pals</p> -->
+
+                                    <h5><u>APPLICATION FOR PROMOTION</u></h5>
+                                    <p><b><u>SENIOR MEMBERS -
+                                                <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'TEACHING' : 'NON-TEACHING') ?>
+                                            </u></b></p>
+                                    <br>
+                                </div>
+                                <p>This Form is to be completed and <u>a copy</u> should be submitted to the Head of your <b>Department</b>.</u> A <b>Soft-copy</b> of your Publications & C.V., etc.
+                                    should be added when forwarding the Application.
+                                </p>
+                                <br>
+                                <input type="hidden" name="apply_type" id="apply_type" value='0'>
+                                <div class="row">
+                                    <div class="input-field col s12 m12 l12">
+                                        <!-- <i class="material-icons prefix"> </i> -->
+                                        <select class="d-block" style="width:100%;" name="position" id="position">
+                                            <option value="" selected disabled>------ Select the Rank you are applying for ------
+                                            </option>
+                                            <?php foreach ($data as $position) : ?>
+                                                <option <?= (($stdata_promo[0]['position_id'] == $position['id']) ? 'selected' : '') ?> value="<?php echo $position['id']; ?>"><?php echo $position['title']; ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <label for="position">APPLICATION FOR PROMOTION TO THE RANK
+                                            OF:</label>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <!-- <i class="material-icons prefix"> </i> -->
+                                        <select class="d-block" style="width:100%;" name="comment" id="comment">
+                                            <option value="" selected disabled>------ Select Type of Promotion ------
+                                            </option>
+                                            <option <?= (($stdata_promo[0]['promo_comments'] == 'REGULAR PROMOTION') ? 'selected' : '') ?> value="REGULAR PROMOTION">REGULAR PROMOTION</option>
+                                            <option <?= (($stdata_promo[0]['promo_comments'] == 'ACCELERATED PROMOTION') ? 'selected' : '') ?> value="ACCELERATED PROMOTION">ACCELERATED PROMOTION
+                                            </option>
+                                            <option <?= (($stdata_promo[0]['promo_comments'] == 'EXCEPTIONAL PROMOTION') ? 'selected' : '') ?> value="EXCEPTIONAL PROMOTION">EXCEPTIONAL PROMOTION
+                                            </option>
+                                        </select>
+                                        <label for="comment" class="text-uppercase font-weight-bold">Type of Promotion:</label>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <input id="dept" name="dept" type="text" value="<?= $stdata[0]['deptname'] ?>" readonly class="validate">
+                                        <label for="dept">DEPARTMENT:</label>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <input id="college" name="college" value="<?= $stdata[0]['collegename'] ?>" readonly type="text" class="validate">
+                                        <label for="college">COLLEGE/DIRECTORATE:</label>
+                                    </div>
+                                    <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                        <div class="input-field col s12 m12 l12">
+                                            <input id="specialization" value="<?= (!empty($stdata_promo[0]['area_specialization']) ? $stdata_promo[0]['area_specialization'] : '') ?>" name="specialization" type="text" class="validate">
+                                            <label for="specialization">AREAS OF SPECIALIZATION:</label>
+                                        </div>
+                                    <?php elseif ($_SESSION['user']['staff_type'] == "NON-ACADEMIC") : ?>
+                                        <input id="specialization" name="specialization" value="" type="hidden">
+
+                                    <?php endif; ?>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="email" name="email" value="<?= $stdata[0]['ucc_mail'] ?>" readonly type="email" class="validate">
+                                        <label for="email">EMAIL ADDRESS:</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="tel" name="tel" value="<?= $stdata[0]['phone'] ?>" readonly type="tel" class="validate">
+                                        <label for="tel">TELEPHONE:</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="present_rank" name="present_rank" readonly value="<?= empty($stdata_promo[0]['present_rank']) ? $current_rank[0]['title'] : $stdata_promo[0]['present_rank'] ?>" type="text" class="validate">
+                                        <label for="present_rank">PRESENT RANK
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'HELD' : '') ?>:</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="pr_edate" name="pr_edate" readonly value="<?= !empty($current_rank[0]['appoint_date']) ? $current_rank[0]['appoint_date'] : $stdata_promo[0]['pr_edate'] ?>" type="date" class="validate">
+                                        <label for="pr_edate">EFFECTIVE DATE:</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="present_rank_ifany" name="present_rank_ifany" value="<?= $stdata_promo[0]['present_rank_ifany'] ?>" type="text" class="validate">
+                                        <label for="present_rank_ifany">PRESENT POSITION HELD (IF ANY):</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="pp_edate" name="pp_edate" value="<?= $stdata_promo[0]['pp_edate'] ?>" type="date" class="validate">
+                                        <label for="pp_edate">EFFECTIVE DATE:</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col s12 m12 l12">
+                                        <p for="first_degree_details">DETAILS OF FIRST DEGREES (STATE WHEN AND WHERE
+                                            OBTAINED, CLASS AND/OR SPECIAL DISTINCTIONS):</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="first_degree_details" name="first_degree_details"> <?= $stdata_promo[0]['first_degree_details'] ?> </textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="pg_degree_details" class="text-uppercase font-weight-bold">Details of Post Graduate
+                                            Degrees (state when and where obtained, class and/or special distinctions (if
+                                            any)):</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="pg_degree_details" name="pg_degree_details"><?= $stdata_promo[0]['pg_degree_details'] ?></textarea>
+
+                                    </div>
+                                    <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                        <div class="col s12 m12 l12">
+                                            <p for="other_qualification" class="text-uppercase font-weight-bold">Other Qualifications with
+                                                Dates; (state when and where obtained):</p>
+                                        </div>
+                                        <div class="input-field col s12 m12 l12">
+                                            <textarea id="other_qualification" name="other_qualification"><?= $stdata_promo[0]['other_qualification'] ?></textarea>
+
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="col s12 m12 l12">
+                                        <p for="prizes_grant_award" class="text-uppercase font-weight-bold">Prizes, Travel Grants and
+                                            Awards; with Dates:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="prizes_grant_award" name="prizes_grant_award"><?= $stdata_promo[0]['prizes_grant_award'] ?></textarea>
+
+                                    </div>
+
+                                    <div class="col s12 m12 l12">
+                                        <p for="previous_post_duties" class="text-uppercase font-weight-bold">
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Previous Posts and Duties held, with Dates' :
+                                                'Previous Posts and Duties held, with Dates, before joining the University') ?>:
+                                        </p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="previous_post_duties" name="previous_post_duties"><?= $stdata_promo[0]['previous_post_duties'] ?></textarea>
+
+                                    </div>
+                                    <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                        <div class="col s12 m12 l12">
+                                            <p for="research_major_projects" class="text-uppercase font-weight-bold">Details of Research or
+                                                Major Projects undertaken; with Dates:</p>
+                                        </div>
+                                        <div class="input-field col s12 m12 l12">
+                                            <textarea id="research_major_projects" name="research_major_projects"><?= $stdata_promo[0]['research_major_projects'] ?></textarea>
+
+                                        </div>
+                                    <?php elseif ($_SESSION['user']['staff_type'] == "NON-ACADEMIC") : ?>
+                                        <input type="hidden" name="research_major_projects1" id="research_major_projects1">
+                                    <?php endif; ?>
+
+                                    <div class="col s12 m12 l12">
+                                        <p for="teaching_duties_experience" class="text-uppercase font-weight-bold">
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Details of Teaching Experience in a University of equivalent level' : 'Posts and Duties with Dates, held in this University') ?>:
+                                        </p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="teaching_duties_experience" name="teaching_duties_experience"><?= $stdata_promo[0]['teaching_duties_experience'] ?></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="conference_seminars_etc" class="text-uppercase font-weight-bold">
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Conferences, Seminars, Symposia, Workshops, etc., attended by Applicant - (give details of Papers presented)' :
+                                                'Particulars of Conferences; Special Seminars, and Workshops in which you have participated. (Please list Papers you read (if any))') ?>:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="conference_seminars_etc" name="conference_seminars_etc"><?= $stdata_promo[0]['conference_seminars_etc'] ?></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="publications_for_previous_promotion" class="text-uppercase font-weight-bold">Publications
+                                            submitted in support of Previous Application for Promotion. Give details of
+                                            Books and Articles and state exact references:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="publications_for_previous_promotion" name="publications_for_previous_promotion"><?= $stdata_promo[0]['publications_for_previous_promotion'] ?></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="new_publication_submitted" class="text-uppercase font-weight-bold">Publications submitted
+                                            in support of Current application for Promotion. Give details of Books and
+                                            Articles and state exact references. Copies of Articles and other Publications
+                                            (where possible) should accompany the Application:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="new_publication_submitted" name="new_publication_submitted"><?= $stdata_promo[0]['new_publication_submitted'] ?></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="professional_membership_bodies" class="text-uppercase font-weight-bold">Membership of
+                                            Professional / Learned Bodies:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="professional_membership_bodies" name="professional_membership_bodies"><?= $stdata_promo[0]['professional_membership_bodies'] ?></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="other_relevant_info" class="text-uppercase font-weight-bold">Any other relevant
+                                            information (Public Service, College or National Committees, etc., on which you
+                                            have served) with dates:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="other_relevant_info" name="other_relevant_info"><?= $stdata_promo[0]['other_relevant_info'] ?></textarea>
+
+                                    </div>
+                                    <?php if (empty($stdata_promo[0]['signature'])) : ?>
+                                        <div class="col s12 m6 l6">
+                                            <label data-error="wrong" data-success="right" for="form28" class="mr-3">Signature():
+                                            </label>
+                                            <input type="file" name="signature" id="form28" class="materialize-file validate ml-0">
+                                            <button class="btn waves-effect waves-light light-blue darken-4" id="save_letter"><b>SAVE</b></button>
+                                        </div>
+                                    <?php else : ?>
+                                        <div class="col s12 m6 l6">
+                                            <div class="row">
+                                                <div class="col s12 m6 l6">
+                                                    <input type="hidden" name="signature" value="<?= $stdata_promo[0]['signature'] ?>" id="form28" class="materialize-file validate ml-0">
+                                                    <img src="<?= $stdata_promo[0]['signature'] ?>" class="img-responsive animated rotateIn" alt="Signature" width="200" height="auto">
+                                                </div>
+                                                <div class="col s12 m6 l6">
+                                                    <div class="m-0">
+                                                        <div class="switch right">
+                                                            <label>
+                                                                <span>Delete Signature</span>
+                                                                <input type="checkbox" value="<?= $stdata_promo[0]['id'] . ',signature'; ?>" name="delete_signature" />
+                                                                <span class="lever"></span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',signature'; ?>)" title="Delete Signature" style="color: red;" value="X"> -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="sub_date" name="sub_date" value="<?= $stdata_promo[0]['sub_date'] ?>" type="date" class="validate">
+                                        <label for="sub_date">DATE: </label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="fullname" name="fullname" value="<?= $stdata[0]['fname'] . ' ' . $stdata[0]['mname'] . ' ' . $stdata[0]['lname'] ?>" type="text" class="validate">
+                                        <label for="fullname" class="text-uppercase font-weight-bold">Name of Applicant (in full):</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="staff_no" name="staff_no" value="<?= $stdata[0]['staff_no'] ?>" type="text" class="validate">
+                                        <label for="staff_no" class="text-uppercase font-weight-bold">Staff No.:</label>
+                                    </div>
+
+                                    <input id="staff_no" name="staff_no" type="hidden" value="<?= $stdata[0]['staff_no'] ?>" class="validate">
+                                </div>
+                                <div class="row">
+                                    <div class="col s12 m6 l6">
+                                        <?php if (empty($stdata_promo[0]['app_letter'])) : ?>
+                                            <strong class="text-dark mb-3" style="font-size:15px;"> PROMOTION APPLICATION LETTER </strong>
+                                            (<strong class="red-text text-darken-4"> Files in
+                                                <strong>.pdf</strong> format and the size less than 1mb.
+                                            </strong>)
+                                            <div class="file-loading">
+                                                <input id="app_letter" name="app_letter" type="file">
+                                            </div><br>
+                                            <button class="btn waves-effect waves-light light-blue darken-4" id="save_letter"><b>SAVE</b></button>
+                                        <?php else : ?>
+                                            <div class="col s12 m6 l6">
+                                                <a href="downloadfile_promos/<?php echo $stdata_promo[0]['id']; ?>:app_letter" class="btn btn-primary btn-sm btn-round" title="Download Letter">
+                                                    <i class="material-icons">download</i> Download Letter
+                                                </a>
+
+                                                <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',app_letter'; ?>)" title="Delete Letter" style="color: red;" value="X"> -->
+                                                <input type="hidden" name="app_letter" value="<?= $stdata_promo[0]['app_letter'] ?>" id="form28" class="materialize-file validate ml-0">
+                                            </div>
+                                            <div class="col s12 m6 l6">
+                                                <div class="m-0">
+                                                    <div class="switch right">
+                                                        <label>
+                                                            <span>Delete Letter</span>
+                                                            <input type="checkbox" value="<?= $stdata_promo[0]['id'] . ',app_letter'; ?>" name="delete_letter" />
+                                                            <span class="lever"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="col s12 m6 l6">
+                                        <?php if (empty($stdata_promo[0]['app_cv'])) : ?>
+                                            <?php if ($_SESSION['user']['staff_type'] == 'ACADEMIC') { ?>
+                                                <a href="https://www.ucc.edu.gh/file/3446/download?token=JVuwh4Et" class="red-text" style="font-size:15px" target="_blank">
+                                                    <i class="material-icons">download</i>
+                                                    DOWNLOAD CV FORMAT</a>
+                                                <br><br>
+                                            <?php } else { ?>
+                                                <a href="https://www.ucc.edu.gh/file/3447/download?token=L78hzjIQ" class="red-text" style="font-size:15px" target="_blank">
+                                                    <i class="material-icons">download</i>
+                                                    DOWNLOAD CV FORMAT</a>
+                                                <br><br>
+                                            <?php } ?>
+                                            <strong class="text-dark mb-3" style="font-size:15px;">UPLOAD YOUR
+                                                CV <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'With Student Appraisal' : '') ?></strong>
+                                            (<strong class="red-text text-darken-4"> Files should be in
+                                                <strong>.pdf</strong> format and the size less than 3mb.
+                                            </strong>)
+                                            <div class="file-loading">
+                                                <input id="app_cv" name="app_cv" type="file">
+                                            </div><br>
+                                            <button class="btn waves-effect waves-light light-blue darken-4" id="save_cv"><b>SAVE</b></button>
+                                        <?php else : ?>
+                                            <div class="col s12 m6 l6">
+                                                <a href="downloadfile_promos/<?php echo $stdata_promo[0]['id']; ?>:app_cv" class="btn btn-primary btn-sm btn-round" title="Download CV">
+                                                    <i class="material-icons">download</i> Download CV
+                                                </a>
+
+                                                <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',app_cv'; ?>)" title="Delete CV" style="color: red;" id="save_cv" value="X"> -->
+                                                <input type="hidden" name="app_cv" value="<?= $stdata_promo[0]['app_cv'] ?>" id="app_cv">
+                                            </div>
+                                            <div class="col s12 m6 l6">
+                                                <div class="m-0">
+                                                    <div class="switch right">
+                                                        <label>
+                                                            <span>Delete CV</span>
+                                                            <input type="checkbox" value="<?= $stdata_promo[0]['id'] . ',app_cv'; ?>" name="delete_cv" />
+                                                            <span class="lever"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <br>
+                                    <div class="col s12 m12 l12 mt-4">
+                                        <h5>UPLOADED PAPERS</h5>
+                                    </div>
+                                    <a href="https://www.ilovepdf.com/compress_pdf" class="red-text animated zoomIn infinite col s12 m12 l12 mt-4" target="_blank" style="font-size:15px">
+                                        CLICK HERE TO REDUCE THE SIZE OF YOUR PAPERS/PUBLICATION BEFORE YOU
+                                        UPLOAD</a>
+                                    <div class="col s12 m12 l12 mt-1">
+                                        <strong class="text-dark mb-3" style="font-size:15px;">UPLOAD YOUR PAPERS </strong>
+                                        (<strong class="red-text text-darken-4"> Each file should be in
+                                            <strong>.pdf</strong> format and the size less than 2mb.
+                                        </strong>)
+                                        <div class="file-loading mt-1">
+                                            <div class="row">
+                                                <div class="col s12 m12 l6">
+                                                    <input id="papers" name="papers" type="file">
+                                                </div>
+                                                <div class="col s12 m12 l6">
+                                                    <input id="paper_num" name="paper_num" placeholder="Unique Publication Number" type="text">
+                                                </div>
+                                                <div class="col s12 m12 l6">
+                                                    <input id="paper_title" name="paper_title" placeholder="Title of Paper" type="text">
+                                                </div>
+                                                <div class="col s12 m12 l6">
+                                                    <button class="btn waves-effect waves-light light-blue darken-4" id="sub_card_no"><b>ADD</b></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php foreach ($stdata_promo_papers as $papers) : ?>
+                                            <div class="row mt-2">
+                                                <div class="col s12 m4 l3">
+                                                    <a href="downloadfile_promos_papers/<?php echo $papers['id']; ?>:file" class="btn btn-primary btn-sm btn-round" title="Download Paper">
+                                                        <i class="material-icons">download</i> <?php echo $papers['title'] ?>
+                                                    </a>
+                                                    <!-- <input type="hidden" name="papers" value="<?= $papers['file'] ?>" id="papers"> -->
+                                                </div>
+                                                <div class="col s12 m4 l3">
+                                                    <p><?php echo $papers['title']; ?></p>
+                                                </div>
+                                                <div class="col s12 m4 l3">
+                                                    <p><?php echo $papers['unique_num']; ?></p>
+                                                </div>
+                                                <div class="col s12 m4 l3">
+                                                    <div class="m-0">
+                                                        <div class="switch right">
+                                                            <label>
+                                                                Delete File
+                                                                <!-- <?php echo $papers['id']; ?> -->
+                                                                <input type="checkbox" value="<?= $papers['id'] . ',file'; ?>" name="delete_file" />
+                                                                <span class="lever"></span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',file'; ?>)" title="Delete Paper" style="color: red;" id="save_cv" value="X"> -->
+                                                </div>
+                                            </div>
+
+                                        <?php endforeach; ?>
+
+                                    </div>
+                                </div><br>
+
+                                <div class="mt-5">
+                                    <div class="row clearfix">
+                                        <div class="col-sm-12 mb-2">
+                                            <div class="form-group form-inline">
+                                                <label class="text-uppercase font-weight-bold text-danger" for="save">Check
+                                                    this if you are done and want to submit the form
+                                                    <div class="switch right">
+                                                        <label>
+                                                            <input type="checkbox" onclick="showDiv2()" class="form-control text-uppercase" id="save" name="save" />
+                                                            <span class="lever"></span>
+                                                        </label>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" id="savecon" style="display: none;">
+                                            <div class="form-group">
+                                                <div class="text-center">
+                                                    <button class="btn waves-effect btn-block waves-light darken-3" style="background-color: #dc3545;" id="sub_card_no"><b>Done Submit</b></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" id="send">
+                                            <div class="form-group">
+                                                <div class="text-center">
+                                                    <div class="row">
+                                                        <div class="col s12 m6 l6">
+                                                            <button class="btn waves-effect btn-block waves-light light-blue darken-4" id="sub_card_no"><b>Save and Continue Later</b></button>
+                                                        </div>
+                                                        <div class="col s12 m6 l6">
+                                                            <a onclick="Popup=window.open('printpage','Popup','toolbar=no,location=0,status=no,menubar=yes,scrollbars=yes,resizable=no, width=800,height=1000,left=400,top=250' ).focus(); return false;" class="btn waves-effect btn-block waves-light light-blue darken-1" href="javascript(void)">
+                                                                Print Preview
+                                                            </a>
+                                                        </div>
+                                                    </div>                                                   
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif (empty($stdata_promo) || $stdata_promo[0]['promo_status'] == 7) : ?>
+                            <div class="card-content pb-1">
+                                <div style="text-align:center;">
+                                    <p><b>UNIVERSITY OF CAPE COAST</b></p>
+                                    <h5><u>APPLICATION FOR PROMOTION</u></h5>
+                                    <p><b><u>SENIOR MEMBERS - <?= $_SESSION['user']['staff_type'] == 'NON-ACADEMIC' ? 'NON-TEACHING' : 'TEACHING'; ?></u></b></p>
+                                    <br>
+                                </div>
+                                <p>This Form is to be completed and <u>a copy</u> should be submitted to the Head of your <b>Department</b>. A <b>Soft-copy</b> of your Publications & C.V., etc.
+                                    should be added when forwarding the Application.
+                                </p>
+                                <br>
+                            <input type="hidden" name="apply_return" id="apply_return" value='0'>
+
+                                <input type="hidden" name="apply_type" id="apply_type" value='0'>
+                                <div class="row">
+                                    <div class="input-field col s12 m12 l12">
+                                        <!-- <i class="material-icons prefix"> </i> -->
+                                        <select class="d-block" style="width:100%;" name="position" id="position">
+                                            <option value="" selected disabled>------ Select the Rank you are applying for ------
+                                            </option>
+                                            <?php foreach ($data as $position) : ?>
+                                                <option value="<?php echo $position['id']; ?>"><?php echo $position['title']; ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <label for="position">APPLICATION FOR PROMOTION TO THE RANK
+                                            OF:</label>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <!-- <i class="material-icons prefix"> </i> -->
+                                        <select class="d-block" style="width:100%;" name="comment" id="comment">
+                                            <option value="" selected disabled>------ Select Type of Promotion ------
+                                            </option>
+                                            <option value="REGULAR PROMOTION">REGULAR PROMOTION</option>
+                                            <option value="ACCELERATED PROMOTION">ACCELERATED PROMOTION </option>
+                                            <option value="EXCEPTIONAL PROMOTION">EXCEPTIONAL PROMOTION </option>
+                                        </select>
+                                        <label for="comment" class="text-uppercase font-weight-bold">Type of Promotion:</label>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <input id="dept" name="dept" type="text" readonly value="<?= $stdata[0]['deptname'] ?>" class="validate">
+                                        <label for="dept">DEPARTMENT:</label>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <input id="college" name="college" readonly value="<?= $stdata[0]['collegename'] ?>" type="text" class="validate">
+                                        <label for="college">COLLEGE/DIRECTORATE:</label>
+                                    </div>
+                                    <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                        <div class="input-field col s12 m12 l12">
+                                            <input id="specialization" value="" name="specialization" type="text" class="validate">
+                                            <label for="specialization">AREAS OF SPECIALIZATION:</label>
+                                        </div>
+                                    <?php elseif ($_SESSION['user']['staff_type'] == "NON-ACADEMIC") : ?>
+                                        <input id="specialization" name="specialization" value="" type="hidden">
+
+                                    <?php endif; ?>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="email" name="email" readonly value="<?= $stdata[0]['ucc_mail'] ?>" type="email" class="validate">
+                                        <label for="email">EMAIL ADDRESS:</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="tel" name="tel" readonly value="<?= $stdata[0]['phone'] ?>" type="tel" class="validate">
+                                        <label for="tel">TELEPHONE:</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="present_rank" name="present_rank" readonly value="<?= $current_rank[0]['title'] ?>" type="text" class="validate">
+                                        <label for="present_rank">PRESENT RANK
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'HELD' : '') ?>:</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="pr_edate" name="pr_edate" readonly value="<?= !empty($current_rank[0]['appoint_date']) ? $current_rank[0]['appoint_date'] : $stdata_promo[0]['pr_edate'] ?>" type="date" class="validate">
+                                        <label for="pr_edate">EFFECTIVE DATE:</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="present_rank_ifany" name="present_rank_ifany" value="" type="text" class="validate">
+                                        <label for="present_rank_ifany">PRESENT POSITION HELD (IF ANY):</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="pp_edate" name="pp_edate" value="" type="date" class="validate">
+                                        <label for="pp_edate">EFFECTIVE DATE:</label>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col s12 m12 l12">
+                                        <label for="first_degree_details">DETAILS OF FIRST DEGREES (STATE WHEN AND WHERE
+                                            OBTAINED, CLASS AND/OR SPECIAL DISTINCTIONS):</label>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="first_degree_details" name="first_degree_details"></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="pg_degree_details" class="text-uppercase font-weight-bold">Details of Post Graduate
+                                            Degrees (state when and whpere obtained, class and/or special distinctions (if
+                                            any)):</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="pg_degree_details" name="pg_degree_details"></textarea>
+
+                                    </div>
+                                    <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                        <div class="col s12 m12 l12">
+                                            <p for="other_qualification" class="text-uppercase font-weight-bold">Other Qualifications with
+                                                Dates; (state when and where obtained):</p>
+                                        </div>
+                                        <div class="input-field col s12 m12 l12">
+                                            <textarea id="other_qualification" name="other_qualification"></textarea>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="col s12 m12 l12">
+                                        <p for="prizes_grant_award" class="text-uppercase font-weight-bold">Prizes, Travel Grants and
+                                            Awards; with Dates:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="prizes_grant_award" name="prizes_grant_award" ></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="previous_post_duties" class="text-uppercase font-weight-bold">
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Previous Posts and Duties held, with Dates' :
+                                                'Previous Posts and Duties held, with Dates, before joining the University') ?>:
+                                        </p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="previous_post_duties" name="previous_post_duties"></textarea>
+
+                                    </div>
+                                    <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                        <div class="col s12 m12 l12">
+                                            <p for="research_major_projects" class="text-uppercase font-weight-bold">Details of Research or
+                                                Major Projects undertaken; with Dates:</p>
+                                        </div>
+                                        <div class="input-field col s12 m12 l12">
+                                            <textarea id="research_major_projects" name="research_major_projects"></textarea>
+
+                                        </div>
+                                    <?php elseif ($_SESSION['user']['staff_type'] == "NON-ACADEMIC") : ?>
+                                        <input type="hidden" name="research_major_projects1" id="research_major_projects1">
+                                    <?php endif; ?>
+                                    <div class="col s12 m12 l12">
+                                        <p for="teaching_duties_experience" class="text-uppercase font-weight-bold">
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Details of Teaching Experience in a University of equivalent level' : 'Posts and Duties with Dates, held in this University') ?>:
+                                        </p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="teaching_duties_experience" name="teaching_duties_experience"></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="conference_seminars_etc" class="text-uppercase font-weight-bold">
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Conferences, Seminars, Symposia, Workshops, etc., attended by Applicant - (give details of Papers presented)' :
+                                                'Particulars of Conferences; Special Seminars, and Workshops in which you have participated. (Please list Papers you read (if any))') ?>:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="conference_seminars_etc" name="conference_seminars_etc"></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="publications_for_previous_promotion" class="text-uppercase font-weight-bold">Publications
+                                            submitted in support of Previous Application for Promotion. Give details of
+                                            Books and Articles and state exact references:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="publications_for_previous_promotion" name="publications_for_previous_promotion"></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="new_publication_submitted" class="text-uppercase font-weight-bold">Publications submitted
+                                            in support of Current application for Promotion. Give details of Books and
+                                            Articles and state exact references. Copies of Articles and other Publications
+                                            (where possible) should accompany the Application:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="new_publication_submitted" name="new_publication_submitted" ></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="professional_membership_bodies" class="text-uppercase font-weight-bold">Membership of
+                                            Professional / Learned Bodies:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="professional_membership_bodies" name="professional_membership_bodies"></textarea>
+
+                                    </div>
+                                    <div class="col s12 m12 l12">
+                                        <p for="other_relevant_info" class="text-uppercase font-weight-bold">Any other relevant
+                                            information (Public Service, College or National Committees, etc., on which you
+                                            have served) with dates:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="other_relevant_info" name="other_relevant_info"></textarea>
+
+                                    </div>
+                                    <?php //if (empty($stdata_promo[0]['signature'])) : ?>
+                                        <div class="col s12 m6 l6">
+                                            <label data-error="wrong" data-success="right" for="form28" class="mr-3">Signature (<strong class="red-text text-darken-4"> Signature should be a picture
+                                                    <strong>.png/.jpg/.jpeg</strong>.
+                                                </strong>):
+                                            </label>
+                                            <input type="file" name="signature" id="form28" class="materialize-file validate ml-0">
+                                            <button class="btn waves-effect waves-light light-blue darken-4" id="save_letter"><b>SAVE</b></button>
+                                        </div>
+                                    <?php //else : ?>
+                                        <!-- <div class="col s12 m6 l6">
+                                            <div class="row">
+                                                <div class="col s12 m6 l6">
+                                                    <input type="hidden" name="signature" value="<?php // $stdata_promo[0]['signature'] ?>" id="form28" class="materialize-file validate ml-0">
+                                                    <img src="<?php // $stdata_promo[0]['signature'] ?>" class="img-responsive animated rotateIn" alt="Signature" width="200" height="auto">
+                                                </div>
+                                                <div class="col s12 m6 l6">
+                                                    <div class="m-0">
+                                                        <div class="switch right">
+                                                            <label>
+                                                                <span>Delete Signature</span>
+                                                                <input type="checkbox" value="<?php // $stdata_promo[0]['id'] . ',signature'; ?>" name="delete_signature" />
+                                                                <span class="lever"></span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div> -->
+                                    <?php //endif; ?>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="sub_date" name="sub_date" value="" type="date" class="validate">
+                                        <label for="sub_date">DATE: </label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="fullname" name="fullname" value="<?= $stdata[0]['fname'] . ' ' . $stdata[0]['mname'] . ' ' . $stdata[0]['lname'] ?>" type="text" class="validate">
+                                        <label for="fullname" class="text-uppercase font-weight-bold">Name of Applicant (in full):</label>
+                                    </div>
+                                    <div class="input-field col s12 m6 l6">
+                                        <input id="staff_no" name="staff_no" value="<?= $stdata[0]['staff_no'] ?>" type="text" class="validate">
+                                        <label for="staff_no" class="text-uppercase font-weight-bold">Staff No.:</label>
+                                    </div>
+
+                                    <input id="staff_no" name="staff_no" type="hidden" value="<?= $stdata[0]['staff_no'] ?>" class="validate">
+                                </div>
+                                <div class="row">
+
+                                    <div class="col s12 m6 l6">
+                                        <strong class="text-dark mb-3" style="font-size:15px;"> PROMOTION APPLICATION LETTER </strong>
+                                        (<strong class="red-text text-darken-4"> Files in
+                                            <strong>.pdf</strong> format and the size less than 1mb.
+                                        </strong>)
+                                        <div class="file-loading">
+                                            <input id="app_letter" name="app_letter" type="file">
+                                        </div><br>
+                                        <button class="btn waves-effect waves-light light-blue darken-4" id="save_letter"><b>SAVE</b></button>
+                                    </div>
+
+                                    <div class="col s12 m6 l6">
+                                        <?php //if (empty($stdata_promo[0]['app_cv'])) : ?>
+                                            <?php if ($_SESSION['user']['staff_type'] == 'ACADEMIC') { ?>
+                                                <a href="https://www.ucc.edu.gh/file/3446/download?token=JVuwh4Et" class="red-text" style="font-size:15px" target="_blank">
+                                                    <i class="material-icons">download</i>
+                                                    DOWNLOAD CV FORMAT</a>
+                                                <br><br>
+                                            <?php } else { ?>
+                                                <a href="https://www.ucc.edu.gh/file/3447/download?token=L78hzjIQ" class="red-text" style="font-size:15px" target="_blank">
+                                                    <i class="material-icons">download</i>
+                                                    DOWNLOAD CV FORMAT</a>
+                                                <br><br>
+                                            <?php } ?>
+                                            <strong class="text-dark mb-3" style="font-size:15px;">UPLOAD YOUR
+                                                CV <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'With Student Appraisal' : '') ?></strong>
+                                            (<strong class="red-text text-darken-4"> Files should be in
+                                                <strong>.pdf</strong> format and the size less than 3mb.
+                                            </strong>)
+                                            <div class="file-loading">
+                                                <input id="app_cv" name="app_cv" type="file">
+                                            </div><br>
+                                            <button class="btn waves-effect waves-light light-blue darken-4" id="save_cv"><b>SAVE</b></button>
+                                        <?php //else : ?>
+                                            <!-- <div class="col s12 m6 l6">
+                                                <a href="downloadfile_promos/<?php //echo $stdata_promo[0]['id']; ?>:app_cv" class="btn btn-primary btn-sm btn-round" title="Download CV">
+                                                    <i class="material-icons">download</i> Download CV
+                                                </a>
+
+                                                <input type="hidden" name="app_cv" value="<?php //echo $stdata_promo[0]['app_cv'] ?>" id="app_cv">
+                                            </div>
+                                            <div class="col s12 m6 l6">
+                                                <div class="m-0">
+                                                    <div class="switch right">
+                                                        <label>
+                                                            <span>Delete CV</span>
+                                                            <input type="checkbox" value="<?php //echo $stdata_promo[0]['id'] . ',app_cv'; ?>" name="delete_cv" />
+                                                            <span class="lever"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div> -->
+                                        <?php //endif; ?>
+                                    </div>
+                                    <br>
+                                    <div class="col s12 m12 l12 mt-4">
+                                        <h5>UPLOADED PAPERS</h5>
+                                    </div>
+                                    <a href="https://www.ilovepdf.com/compress_pdf" class="red-text animated zoomIn infinite col s12 m12 l12 mt-4" target="_blank" style="font-size:15px">
+                                        CLICK HERE TO REDUCE THE SIZE OF YOUR PAPERS/PUBLICATION BEFORE YOU
+                                        UPLOAD</a>
+                                    <div class="col s12 m12 l12 mt-1">
+                                        <strong class="text-dark mb-3" style="font-size:15px;">UPLOAD YOUR PAPERS </strong>
+                                        (<strong class="red-text text-darken-4"> Each file should be in
+                                            <strong>.pdf</strong> format and the size less than 2mb.
+                                        </strong>)
+                                        <div class="file-loading mt-1">
+                                            <div class="row">
+                                                <div class="col s12 m12 l6">
+                                                    <input id="papers" name="papers" type="file">
+                                                </div>
+                                                <div class="col s12 m12 l6">
+                                                    <input id="paper_num" name="paper_num" placeholder="Unique Publication Number" type="text">
+                                                </div>
+                                                <div class="col s12 m12 l6">
+                                                    <input id="paper_title" name="paper_title" placeholder="Title of Paper" type="text">
+                                                </div>
+                                                <div class="col s12 m12 l6">
+                                                    <button class="btn waves-effect waves-light light-blue darken-4" id="sub_card_no"><b>ADD</b></button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <?php //foreach ($stdata_promo_papers as $papers) : ?>
+                                            <!-- <div class="row mt-2">
+                                                <div class="col s12 m4 l3">
+                                                    <a href="downloadfile_promos_papers/<?php //echo $papers['id']; ?>:file" class="btn btn-primary btn-sm btn-round" title="Download Paper">
+                                                        <i class="material-icons">download</i> <?php //echo $papers['title'] ?>
+                                                    </a>
+                                                </div>
+                                                <div class="col s12 m4 l3">
+                                                    <p><?php //echo $papers['title']; ?></p>
+                                                </div>
+                                                <div class="col s12 m4 l3">
+                                                    <p><?php //echo $papers['unique_num']; ?></p>
+                                                </div>
+                                                <div class="col s12 m4 l3">
+                                                    <div class="m-0">
+                                                        <div class="switch right">
+                                                            <label>
+                                                                Delete File
+                                                                <input type="checkbox" value="<?php //echo $papers['id'] . ',file'; ?>" name="delete_file" />
+                                                                <span class="lever"></span>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                                                                                    ?>)" title="Delete Paper" style="color: red;" id="save_cv" value="X"> 
+                                                </div>
+                                            </div> -->
+
+                                        <?php //endforeach; ?>
+
+                                    </div>
+                                </div><br>
+
+                                <div class="mt-5">
+                                    <div class="row clearfix">
+                                        <div class="col-sm-12 mb-2">
+                                            <div class="form-group form-inline">
+                                                <label class="text-uppercase font-weight-bold text-danger" for="save">Check
+                                                    this if you are done and want to submit the form
+                                                    <div class="switch right">
+                                                        <label>
+                                                            <input type="checkbox" onclick="showDiv2()" class="form-control text-uppercase" id="save" name="save" />
+                                                            <span class="lever"></span>
+                                                        </label>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" id="savecon" style="display: none;">
+                                            <div class="form-group">
+                                                <div class="text-center">
+                                                    <button class="btn waves-effect btn-block waves-light darken-3" style="background-color: #dc3545;" id="sub_card_no"><b>Done Submit</b></button>
+                                                    <!-- <input type="submit" id="save" name="save"
+                                                    class="btn waves-effect waves-light light-blue darken-4"
+                                                    value="Save and Continue Later"> -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" id="send">
+                                            <div class="form-group">
+                                                <div class="text-center">
+                                                    <div class="row">
+                                                        <div class="col s12 m6 l6">
+                                                        <button class="btn waves-effect btn-block waves-light light-blue darken-4" id="sub_card_no"><b>Save and Continue Later</b></button>
+                                                        </div>
+                                                        <div class="col s12 m6 l6">
+                                                        <a onclick="Popup=window.open('printpage','Popup','toolbar=no,location=0,status=no,menubar=yes,scrollbars=yes,resizable=no, width=800,height=1000,left=400,top=250' ).focus(); return false;" class="btn waves-effect btn-block waves-light light-blue darken-1" href="javascript(void)">
+                                                            Print Preview
+                                                        </a>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <!-- <input type="submit" id="done" name="done"
+                                                    class="btn btn-danger btn-block text-white" value="Done Submit"> -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                    </div>
+                </form>
+
+
+                <form class="col s12 m12 l12" action="" method="post" name="postform" id="frmFileUpload">
+                    <div class="card">
+                    <?php elseif (($stdata_promo[0]['status'] == 7 || $stdata_promo[0]['status'] == 1) && $stdata_promo[0]['promo_status'] < 7) : ?>
+                        <div class="card-content pb-1">
+                            <div style="text-align:center;">
+                                <p><b>UNIVERSITY OF CAPE COAST</b></p>
+                                <h5><u>APPLICATION FOR PROMOTION</u></h5>
+                                <p><b><u>SENIOR MEMBERS -
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'TEACHING' : 'NON-TEACHING') ?>
+                                        </u></b></p>
+                                <br>
+                            </div>
+                            <!-- <p>This Form is to be completed in <u>five copy</u> (2 original copies & 3 photocopies)
+                                and returned to the <b>Director (Directorate of Human Resource)</b>. A <b>Soft-copy</b> of your Publications & C.V., etc.
+                                should be added when forwarding the Application.
+                            </p> -->
+                            <p>This Form is to be completed and <u>a copy</u> should be submitted to the Head of your <b>Department</b>. A <b>Soft-copy</b> of your Publications & C.V., etc.
+                                should be added when forwarding the Application.
+                            </p>
+                            <br>
+                            <input type="hidden" name="apply_type" id="apply_type" value='0'>
+                            <input type="hidden" name="apply_return" id="apply_return" value='<?=$stdata_promo[0]['returned'] ?>'>
+
+                            <div class="row">
+                                <div class="input-field col s12 m12 l12">
+                                    <p>
+                                        APPLICATION FOR PROMOTION TO THE RANK OF:
+                                        <?= $stdata[0]['position_applied'] ?>
+                                    </p>
+                                </div>
+                                <div class="input-field col s12 m12 l12 text-uppercase">
+                                    <p><b> Type of Promotion: </b> <?= $stdata_promo[0]['promo_comments'] ?></p>
+                                </div>
+                                <div class="input-field col s12 m12 l12 text-uppercase">
+                                    <p><b>Department:</b> <?= $stdata[0]['deptname'] ?></p>
+                                </div>
+                                <div class="input-field col s12 m12 l12 text-uppercase">
+                                    <p><b>College/ Directorate:</b> <?= $stdata[0]['collegename'] ?></p>
+                                </div>
+                                <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                    <div class="input-field text-uppercase col s12 m12 l12">
+                                        <p><b>AREAS OF SPECIALIZATION:</b> <?= $stdata_promo[0]['area_specialization'] ?></p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="row">
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>EMAIL ADDRESS:</b> <?= $stdata[0]['ucc_mail'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>TELEPHONE:</b> <?= $stdata[0]['phone'] ?></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>PRESENT RANK <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'HELD' : '') ?>:</br> <?= $stdata_promo[0]['present_rank'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>EFFECTIVE DATE: </b> <?= $stdata_promo[0]['pr_edate'] ?></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>PRESENT POSITION HELD (IF ANY):</b> <?= $stdata_promo[0]['present_rank_ifany'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>EFFECTIVE DATE:</b> <?= $stdata_promo[0]['pp_edate'] ?></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b>DETAILS OF FIRST DEGREES (STATE WHEN AND WHERE OBTAINED, CLASS AND/OR SPECIAL DISTINCTIONS):
+                                        </b> <br><?= $stdata_promo[0]['first_degree_details'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b>Details of Post Graduate
+                                            Degrees (state when and where obtained, class and/or special distinctions (if
+                                            any)):</b> <br> <?= $stdata_promo[0]['pg_degree_details'] ?></p>
+                                </div>
+                                <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                    <div class="input-field text-uppercase col s12 m12 l12">
+                                        <p><b>Other Qualifications with
+                                                Dates; (state when and where obtained):</b> <br> <?= $stdata_promo[0]['other_qualification'] ?></p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b>Prizes, Travel Grants and
+                                            Awards; with Dates:</b> <br> <?= $stdata_promo[0]['prizes_grant_award'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b><?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Previous Posts and Duties held, with Dates' :
+                                                'Previous Posts and Duties held, with Dates, before joining the University') ?>:</b> <br> <?= $stdata_promo[0]['previous_post_duties'] ?></p>
+
+                                </div>
+                                <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                    <div class="input-field text-uppercase col s12 m12 l12">
+                                        <p><b>Details of Research or
+                                                Major Projects undertaken; with Dates:</b> <br> <?= $stdata_promo[0]['research_major_projects'] ?></p>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b><?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Details of Teaching Experience in a University of equivalent level' : 'Posts and Duties with Dates, held in this University') ?>:
+                                        </b> <br><?= $stdata_promo[0]['teaching_duties_experience'] ?></p>
+
+                                </div>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b><?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Conferences, Seminars, Symposia, Workshops, etc., attended by Applicant - (give details of Papers presented)' :
+                                                'Particulars of Conferences; Special Seminars, and Workshops in which you have participated. (Please list Papers you read (if any))') ?>:
+                                        </b> <br><?= $stdata_promo[0]['conference_seminars_etc'] ?></p>
+
+                                </div>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b>Publications
+                                            submitted in support of Previous Application for Promotion. Give details of
+                                            Books and Articles and state exact references: </b><br><?= $stdata_promo[0]['publications_for_previous_promotion'] ?></p>
+
+                                </div>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b>Publications submitted
+                                            in support of Current application for Promotion. Give details of Books and
+                                            Articles and state exact references. Copies of Articles and other Publications
+                                            (where possible) should accompany the Application: </b><br><?= $stdata_promo[0]['new_publication_submitted'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b>Membership of
+                                            Professional / Learned Bodies: </b><?= $stdata_promo[0]['professional_membership_bodies'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m12 l12">
+                                    <p><b>Any other relevant
+                                            information (Public Service, College or National Committees, etc., on which you
+                                            have served) with dates: </b><br><?= $stdata_promo[0]['other_relevant_info'] ?></p>
+                                </div>
+                                <?php if (empty($stdata_promo[0]['signature'])) : ?>
+                                <?php else : ?>
+                                    <div class="col s12 m6 l6">
+                                        <div class="row">
+                                            <div class="col s12 m12 l12">
+                                                <img src="<?= $stdata_promo[0]['signature'] ?>" class="img-responsive animated rotateIn" alt="Signature" width="200" height="auto">
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>DATE: </b> <?= $stdata_promo[0]['sub_date'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>Name of Applicant (in full): </b> <?= $stdata_promo[0]['fullname'] ?></p>
+                                </div>
+                                <div class="input-field text-uppercase col s12 m6 l6">
+                                    <p><b>Staff No.: </b> <?= $stdata_promo[0]['staff_no'] ?></p>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <?php if (empty($stdata_promo[0]['app_letter'])) : ?>
+                                <?php else : ?>
+                                    <div class="col s12 m6 l6">
+                                        <a href="downloadfile_promos/<?php echo $stdata_promo[0]['id']; ?>:app_letter" class="btn btn-primary btn-sm btn-round" title="Download Letter">
+                                            <i class="material-icons">download</i> Download Letter
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (empty($stdata_promo[0]['app_cv'])) : ?>
+                                <?php else : ?>
+                                    <div class="col s12 m6 l6">
+                                        <a href="downloadfile_promos/<?php echo $stdata_promo[0]['id']; ?>:app_cv" class="btn btn-primary btn-sm btn-round" title="Download CV">
+                                            <i class="material-icons">download</i> Download CV
+                                        </a>
+                                    </div>
+                                <?php endif; ?>
+                                <br>
+                                <div class="col s12 m12 l12 mt-4">
+                                    <h5>UPLOADED PAPERS</h5>
+                                </div>
+                                <div class="col s12 m12 l12 mt-1">
+                                    <?php foreach ($stdata_promo_papers as $papers) : ?>
+                                        <div class="row mt-2">
+                                            <div class="col s12 m6 l6">
+                                                <a href="downloadfile_promos_papers/<?php echo $papers['id']; ?>:file" class="btn btn-primary btn-sm btn-round" title="Download Paper">
+                                                    <i class="material-icons">download</i> <?php echo $papers['title'] ?>
+                                                </a>
+                                            </div>
+                                            <div class="col s12 m6 l6">
+                                                <p><?php echo $papers['unique_num']; ?></p>
+                                            </div>
+                                            <div class="col s12 m6 l6">
+                                                <p><?php echo $papers['title']; ?></p>
+                                            </div>
+                                        </div>
+
+                                    <?php endforeach; ?>
+
+                                </div>
+                            </div><br>
+
+                            <div class="mt-5">
+                                <div class="row clearfix">
+                                    <div class="col-sm-12" id="send">
+                                        <div class="form-group">
+                                            <div class="text-center">
+                                                <!-- <button class="btn waves-effect btn-block waves-light light-blue darken-4" onclick="print()" title="Print Form">
+                                                        <i class="material-icons">print</i> Print
+                                                    </button> -->
+                                                <a onclick="Popup=window.open('printpage','Popup','toolbar=no,location=0,status=no,menubar=yes,scrollbars=yes,resizable=no, width=800,height=1000,left=400,top=250' ).focus(); return false;" class="btn waves-effect btn-block waves-light light-blue darken-4" href="javascript(void)">
+                                                    Print Form
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php //endif; 
+                        ?>
+                        <br>
+                    </div>
+                </form>
+
+                <form class="col s12 m12 l12" action="" method="post" name="postform" id="frmFileUpload">
+                    <div class="card">
+                    <?php elseif (($stdata_promo[0]['status'] == 0 && $stdata_promo[0]['returned'] == 0)) : ?>
+                        <div class="card-content pb-1">
+                            <div style="text-align:center;">
+                                <p><b>UNIVERSITY OF CAPE COAST</b></p>
+                                <!-- <p>pals</p> -->
+
+                                <h5><u>APPLICATION FOR PROMOTION</u></h5>
+                                <p><b><u>SENIOR MEMBERS -
+                                            <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'TEACHING' : 'NON-TEACHING') ?>
+                                        </u></b></p>
+                                <br>
+                            </div>
+                            <!-- <p>This Form is to be completed in <u>five copy</u> (2 original copies & 3 photocopies)
+                                and returned to the <b>Director (Directorate of Human Resource)</b>. A <b>Soft-copy</b> of your Publications & C.V., etc.
+                                should be added when forwarding the Application.
+                            </p> -->
+                            <p>This Form is to be completed and <u>a copy</u> should be submitted to the Head of your <b>Department</b>. A <b>Soft-copy</b> of your Publications & C.V., etc.
+                                should be added when forwarding the Application.
+                            </p>
+                            <br>
+                            <input type="hidden" name="apply_type" id="apply_type" value='0'>
+                            <input type="hidden" name="apply_return" id="apply_return" value='<?=$stdata_promo[0]['returned'] ?>'>
+
+                            <div class="row">
+                                <div class="input-field col s12 m12 l12">
+                                    <!-- <i class="material-icons prefix"> </i> -->
+                                    <select class="d-block" style="width:100%;" name="position" id="position">
+                                        <option value="" selected disabled>------ Select the Rank you are applying for ------
+                                        </option>
+                                        <?php foreach ($data as $position) : ?>
+                                            <option <?= (($stdata_promo[0]['position_id'] == $position['id']) ? 'selected' : '') ?> value="<?php echo $position['id']; ?>"><?php echo $position['title']; ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <label for="position">APPLICATION FOR PROMOTION TO THE RANK
+                                        OF:</label>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <!-- <i class="material-icons prefix"> </i> -->
+                                    <select class="d-block" style="width:100%;" name="comment" id="comment">
+                                        <option value="" selected disabled>------ Select Type of Promotion ------
+                                        </option>
+                                        <option <?= (($stdata_promo[0]['promo_comments'] == 'REGULAR PROMOTION') ? 'selected' : '') ?> value="REGULAR PROMOTION">REGULAR PROMOTION</option>
+                                        <option <?= (($stdata_promo[0]['promo_comments'] == 'ACCELERATED PROMOTION') ? 'selected' : '') ?> value="ACCELERATED PROMOTION">ACCELERATED PROMOTION
+                                        </option>
+                                        <option <?= (($stdata_promo[0]['promo_comments'] == 'EXCEPTIONAL PROMOTION') ? 'selected' : '') ?> value="EXCEPTIONAL PROMOTION">EXCEPTIONAL PROMOTION
+                                        </option>
+                                    </select>
+                                    <label for="comment" class="text-uppercase font-weight-bold">Type of Promotion:</label>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <input id="dept" name="dept" type="text" readonly value="<?= $stdata[0]['deptname'] ?>" class="validate">
+                                    <label for="dept">DEPARTMENT:</label>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <input id="college" name="college" readonly value="<?= $stdata[0]['collegename'] ?>" type="text" class="validate">
+                                    <label for="college">COLLEGE/DIRECTORATE:</label>
+                                </div>
+                                <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                    <div class="input-field col s12 m12 l12">
+                                        <input id="specialization" value="<?= (!empty($stdata_promo[0]['area_specialization']) ? $stdata_promo[0]['area_specialization'] : '') ?>" name="specialization" type="text" class="validate">
+                                        <label for="specialization">AREAS OF SPECIALIZATION:</label>
+                                    </div>
+                                <?php elseif ($_SESSION['user']['staff_type'] == "NON-ACADEMIC") : ?>
+                                    <input id="specialization" name="specialization" value="" type="hidden">
+
+                                <?php endif; ?>
+                            </div>
+                            <div class="row">
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="email" name="email" readonly value="<?= $stdata[0]['ucc_mail'] ?>" type="email" class="validate">
+                                    <label for="email">EMAIL ADDRESS:</label>
+                                </div>
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="tel" name="tel" readonly value="<?= $stdata[0]['phone'] ?>" type="tel" class="validate">
+                                    <label for="tel">TELEPHONE:</label>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="present_rank" name="present_rank" readonly value="<?= empty($stdata_promo[0]['present_rank']) ? $current_rank[0]['title'] : $stdata_promo[0]['present_rank'] ?>" type="text" class="validate">
+                                    <label for="present_rank">PRESENT RANK
+                                        <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'HELD' : '') ?>:</label>
+                                </div>
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="pr_edate" name="pr_edate" readonly value="<?= !empty($current_rank[0]['appoint_date']) ? $current_rank[0]['appoint_date'] : $stdata_promo[0]['pr_edate'] ?>" type="date" class="validate">
+                                    <label for="pr_edate">EFFECTIVE DATE:</label>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="present_rank_ifany" name="present_rank_ifany" value="<?= $stdata_promo[0]['present_rank_ifany'] ?>" type="text" class="validate">
+                                    <label for="present_rank_ifany">PRESENT POSITION HELD (IF ANY):</label>
+                                </div>
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="pp_edate" name="pp_edate" value="<?= $stdata_promo[0]['pp_edate'] ?>" type="date" class="validate">
+                                    <label for="pp_edate">EFFECTIVE DATE:</label>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col s12 m12 l12">
+                                    <p for="first_degree_details">DETAILS OF FIRST DEGREES (STATE WHEN AND WHERE
+                                        OBTAINED, CLASS AND/OR SPECIAL DISTINCTIONS):</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="first_degree_details" name="first_degree_details" > <?= $stdata_promo[0]['first_degree_details'] ?> </textarea>
+
+                                </div>
+                                <div class="col s12 m12 l12">
+                                    <p for="pg_degree_details" class="text-uppercase font-weight-bold">Details of Post Graduate
+                                        Degrees (state when and where obtained, class and/or special distinctions (if
+                                        any)):</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="pg_degree_details" name="pg_degree_details" ><?= $stdata_promo[0]['pg_degree_details'] ?></textarea>
+                                </div>
+                                <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                    <div class="col s12 m12 l12">
+                                        <p for="other_qualification" class="text-uppercase font-weight-bold">Other Qualifications with
+                                            Dates; (state when and where obtained):</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="other_qualification" name="other_qualification"><?= $stdata_promo[0]['other_qualification'] ?></textarea>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="col s12 m12 l12">
+                                    <p for="prizes_grant_award" class="text-uppercase font-weight-bold">Prizes, Travel Grants and
+                                        Awards; with Dates:</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="prizes_grant_award" name="prizes_grant_award" ><?= $stdata_promo[0]['prizes_grant_award'] ?></textarea>
+
+                                </div>
+                                <div class="col s12 m12 l12">
+                                    <p for="previous_post_duties" class="text-uppercase font-weight-bold">
+                                        <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Previous Posts and Duties held, with Dates' :
+                                            'Previous Posts and Duties held, with Dates, before joining the University') ?>:
+                                    </p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="previous_post_duties" name="previous_post_duties"><?= $stdata_promo[0]['previous_post_duties'] ?></textarea>
+
+                                </div>
+                                <?php if ($_SESSION['user']['staff_type'] == "ACADEMIC") : ?>
+                                    <div class="col s12 m12 l12">
+                                        <p for="research_major_projects" class="text-uppercase font-weight-bold">Details of Research or
+                                            Major Projects undertaken; with Dates:</p>
+                                    </div>
+                                    <div class="input-field col s12 m12 l12">
+                                        <textarea id="research_major_projects" name="research_major_projects"><?= $stdata_promo[0]['research_major_projects'] ?></textarea>
+
+                                    </div>
+                                <?php elseif ($_SESSION['user']['staff_type'] == "NON-ACADEMIC") : ?>
+                                    <input type="hidden" name="research_major_projects1" id="research_major_projects1">
+                                <?php endif; ?>
+                                <div class="col s12 m12 l12">
+                                    <p for="teaching_duties_experience" class="text-uppercase font-weight-bold">
+                                        <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Details of Teaching Experience in a University of equivalent level' : 'Posts and Duties with Dates, held in this University') ?>:
+                                    </p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="teaching_duties_experience" name="teaching_duties_experience"><?= $stdata_promo[0]['teaching_duties_experience'] ?></textarea>
+
+                                </div>
+                                <div class="col s12 m12 l12">
+                                    <p for="conference_seminars_etc" class="text-uppercase font-weight-bold">
+                                        <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'Conferences, Seminars, Symposia, Workshops, etc., attended by Applicant - (give details of Papers presented)' :
+                                            'Particulars of Conferences; Special Seminars, and Workshops in which you have participated. (Please list Papers you read (if any))') ?>:</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="conference_seminars_etc" name="conference_seminars_etc"><?= $stdata_promo[0]['conference_seminars_etc'] ?></textarea>
+
+                                </div>
+                                <div class="col s12 m12 l12">
+                                    <p for="publications_for_previous_promotion" class="text-uppercase font-weight-bold">Publications
+                                        submitted in support of Previous Application for Promotion. Give details of
+                                        Books and Articles and state exact references:</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="publications_for_previous_promotion" name="publications_for_previous_promotion"><?= $stdata_promo[0]['publications_for_previous_promotion'] ?></textarea>
+
+                                </div>
+                                <div class="col s12 m12 l12">
+                                    <p for="new_publication_submitted" class="text-uppercase font-weight-bold">Publications submitted
+                                        in support of Current application for Promotion. Give details of Books and
+                                        Articles and state exact references. Copies of Articles and other Publications
+                                        (where possible) should accompany the Application:</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="new_publication_submitted" name="new_publication_submitted"><?= $stdata_promo[0]['new_publication_submitted'] ?></textarea>
+
+                                </div>
+                                <div class="col s12 m12 l12">
+                                    <p for="professional_membership_bodies" class="text-uppercase font-weight-bold">Membership of
+                                        Professional / Learned Bodies:</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="professional_membership_bodies" name="professional_membership_bodies" ><?= $stdata_promo[0]['professional_membership_bodies'] ?></textarea>
+
+                                </div>
+                                <div class="col s12 m12 l12">
+                                    <p for="other_relevant_info" class="text-uppercase font-weight-bold">Any other relevant
+                                        information (Public Service, College or National Committees, etc., on which you
+                                        have served) with dates:</p>
+                                </div>
+                                <div class="input-field col s12 m12 l12">
+                                    <textarea id="other_relevant_info" name="other_relevant_info"><?= $stdata_promo[0]['other_relevant_info'] ?></textarea>
+
+                                </div>
+                                <?php if (empty($stdata_promo[0]['signature'])) : ?>
+                                    <div class="col s12 m6 l6">
+                                        <label data-error="wrong" data-success="right" for="form28" class="mr-3">Signature (<strong class="red-text text-darken-4"> Signature should be a picture
+                                                <strong>.png/.jpg/.jpeg</strong>.
+                                            </strong>):
+                                        </label>
+                                        <input type="file" name="signature" id="form28" class="materialize-file validate ml-0">
+                                        <button class="btn waves-effect waves-light light-blue darken-4" id="save_letter"><b>SAVE</b></button>
+                                    </div>
+                                <?php else : ?>
+                                    <div class="col s12 m6 l6">
+                                        <div class="row">
+                                            <div class="col s12 m6 l6">
+                                                <input type="hidden" name="signature" value="<?= $stdata_promo[0]['signature'] ?>" id="form28" class="materialize-file validate ml-0">
+                                                <img src="<?= $stdata_promo[0]['signature'] ?>" class="img-responsive animated rotateIn" alt="Signature" width="200" height="auto">
+                                            </div>
+                                            <div class="col s12 m6 l6">
+                                                <div class="m-0">
+                                                    <div class="switch right">
+                                                        <label>
+                                                            <span>Delete Signature</span>
+                                                            <input type="checkbox" value="<?= $stdata_promo[0]['id'] . ',signature'; ?>" name="delete_signature" />
+                                                            <span class="lever"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',signature'; ?>)" title="Delete Signature" style="color: red;" value="X"> -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="sub_date" name="sub_date" value="<?= $stdata_promo[0]['sub_date'] ?>" type="date" class="validate">
+                                    <label for="sub_date">DATE: </label>
+                                </div>
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="fullname" name="fullname" value="<?= $stdata[0]['fname'] . ' ' . $stdata[0]['mname'] . ' ' . $stdata[0]['lname'] ?>" type="text" class="validate">
+                                    <label for="fullname" class="text-uppercase font-weight-bold">Name of Applicant (in full):</label>
+                                </div>
+                                <div class="input-field col s12 m6 l6">
+                                    <input id="staff_no" name="staff_no" value="<?= $stdata[0]['staff_no'] ?>" type="text" class="validate">
+                                    <label for="staff_no" class="text-uppercase font-weight-bold">Staff No.:</label>
+                                </div>
+
+                                <input id="staff_no" name="staff_no" type="hidden" value="<?= $stdata[0]['staff_no'] ?>" class="validate">
+                            </div>
+                            <div class="row">
+                                <div class="col s12 m6 l6">
+                                    <?php if (empty($stdata_promo[0]['app_letter'])) : ?>
+                                        <strong class="text-dark mb-3" style="font-size:15px;"> PROMOTION APPLICATION LETTER </strong>
+                                        (<strong class="red-text text-darken-4"> Files in
+                                            <strong>.pdf</strong> format and the size less than 1mb.
+                                        </strong>)
+                                        <div class="file-loading">
+                                            <input id="app_letter" name="app_letter" type="file">
+                                        </div><br>
+                                        <button class="btn waves-effect waves-light light-blue darken-4" id="save_letter"><b>SAVE</b></button>
+                                    <?php else : ?>
+                                        <div class="col s12 m6 l6">
+                                            <a href="downloadfile_promos/<?php echo $stdata_promo[0]['id']; ?>:app_letter" class="btn btn-primary btn-sm btn-round" title="Download Letter">
+                                                <i class="material-icons">download</i> Download Letter
+                                            </a>
+
+                                            <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',app_letter'; ?>)" title="Delete Letter" style="color: red;" value="X"> -->
+                                            <input type="hidden" name="app_letter" value="<?= $stdata_promo[0]['app_letter'] ?>" id="form28" class="materialize-file validate ml-0">
+                                        </div>
+                                        <div class="col s12 m6 l6">
+                                            <div class="m-0">
+                                                <div class="switch right">
+                                                    <label>
+                                                        <span>Delete Letter</span>
+                                                        <input type="checkbox" value="<?= $stdata_promo[0]['id'] . ',app_letter'; ?>" name="delete_letter" />
+                                                        <span class="lever"></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="col s12 m6 l6">
+                                    <?php if (empty($stdata_promo[0]['app_cv'])) : ?>
+                                        <?php if ($_SESSION['user']['staff_type'] == 'ACADEMIC') { ?>
+                                            <a href="https://www.ucc.edu.gh/file/3446/download?token=JVuwh4Et" class="red-text" style="font-size:15px" target="_blank">
+                                                <i class="material-icons">download</i>
+                                                DOWNLOAD CV FORMAT</a>
+                                            <br><br>
+                                        <?php } else { ?>
+                                            <a href="https://www.ucc.edu.gh/file/3447/download?token=L78hzjIQ" class="red-text" style="font-size:15px" target="_blank">
+                                                <i class="material-icons">download</i>
+                                                DOWNLOAD CV FORMAT</a>
+                                            <br><br>
+                                        <?php } ?>
+                                        <strong class="text-dark mb-3" style="font-size:15px;">UPLOAD YOUR
+                                            CV <?= (($_SESSION['user']['staff_type'] == "ACADEMIC") ? 'With Student Appraisal' : '') ?></strong>
+                                        (<strong class="red-text text-darken-4"> Files should be in
+                                            <strong>.pdf</strong> format and the size less than 3mb.
+                                        </strong>)
+                                        <div class="file-loading">
+                                            <input id="app_cv" name="app_cv" type="file">
+                                        </div><br>
+                                        <button class="btn waves-effect waves-light light-blue darken-4" id="save_cv"><b>SAVE</b></button>
+                                    <?php else : ?>
+                                        <div class="col s12 m6 l6">
+                                            <a href="downloadfile_promos/<?php echo $stdata_promo[0]['id']; ?>:app_cv" class="btn btn-primary btn-sm btn-round" title="Download CV">
+                                                <i class="material-icons">download</i> Download CV
+                                            </a>
+
+                                            <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',app_cv'; ?>)" title="Delete CV" style="color: red;" id="save_cv" value="X"> -->
+                                            <input type="hidden" name="app_cv" value="<?= $stdata_promo[0]['app_cv'] ?>" id="app_cv">
+                                        </div>
+                                        <div class="col s12 m6 l6">
+                                            <div class="m-0">
+                                                <div class="switch right">
+                                                    <label>
+                                                        <span>Delete CV</span>
+                                                        <input type="checkbox" value="<?= $stdata_promo[0]['id'] . ',app_cv'; ?>" name="delete_cv" />
+                                                        <span class="lever"></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                                <br>
+                                <div class="col s12 m12 l12 mt-4">
+                                    <h5>UPLOADED PAPERS</h5>
+                                </div>
+                                <a href="https://www.ilovepdf.com/compress_pdf" class="red-text animated zoomIn infinite col s12 m12 l12 mt-4" target="_blank" style="font-size:15px">
+                                    CLICK HERE TO REDUCE THE SIZE OF YOUR PAPERS/PUBLICATION BEFORE YOU
+                                    UPLOAD</a>
+                                <div class="col s12 m12 l12 mt-1">
+                                    <strong class="text-dark mb-3" style="font-size:15px;">UPLOAD YOUR PAPERS </strong>
+                                    (<strong class="red-text text-darken-4"> Each file should be in
+                                        <strong>.pdf</strong> format and the size less than 2mb.
+                                    </strong>)
+                                    <div class="file-loading mt-1">
+                                        <div class="row">
+                                            <div class="col s12 m12 l6">
+                                                <input id="papers" name="papers" type="file">
+                                            </div>
+                                            <div class="col s12 m12 l6">
+                                                <input id="paper_num" name="paper_num" placeholder="Unique Publication Number" type="text">
+                                            </div>
+                                            <div class="col s12 m12 l6">
+                                                <input id="paper_title" name="paper_title" placeholder="Title of Paper" type="text">
+                                            </div>
+                                            <div class="col s12 m12 l6">
+                                                <button class="btn waves-effect waves-light light-blue darken-4" id="sub_card_no"><b>ADD</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php foreach ($stdata_promo_papers as $papers) : ?>
+                                        <div class="row mt-2">
+                                            <div class="col s12 m4 l3">
+                                                <a href="downloadfile_promos_papers/<?php echo $papers['id']; ?>:file" class="btn btn-primary btn-sm btn-round" title="Download Paper">
+                                                    <i class="material-icons">download</i> <?php echo $papers['title'] ?>
+                                                </a>
+                                                <!-- <input type="hidden" name="papers" value="<?= $papers['file'] ?>" id="papers"> -->
+                                            </div>
+                                            <div class="col s12 m4 l3">
+                                                <p><?php echo $papers['title']; ?></p>
+                                            </div>
+                                            <div class="col s12 m4 l3">
+                                                <p><?php echo $papers['unique_num']; ?></p>
+                                            </div>
+                                            <div class="col s12 m4 l3">
+                                                <div class="m-0">
+                                                    <div class="switch right">
+                                                        <label>
+                                                            Delete File
+                                                            <!-- <?php echo $papers['id']; ?> -->
+                                                            <input type="checkbox" value="<?= $papers['id'] . ',file'; ?>" name="delete_file" />
+                                                            <span class="lever"></span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <!-- <input type="submit" class="ml-4" onclick="promo_data_del(<?= $stdata_promo[0]['id'] . ',file'; ?>)" title="Delete Paper" style="color: red;" id="save_cv" value="X"> -->
+                                            </div>
+                                        </div>
+
+                                    <?php endforeach; ?>
+
+                                </div>
+                            </div><br>
+
+                            <div class="mt-5">
+                                <div class="row clearfix">
+                                    <div class="col-sm-12 mb-2">
+                                        <div class="form-group form-inline">
+                                            <label class="text-uppercase font-weight-bold text-danger" for="save">Check
+                                                this if you are done and want to submit the form
+                                                <div class="switch right">
+                                                    <label>
+                                                        <input type="checkbox" onclick="showDiv2()" class="form-control text-uppercase" id="save" name="save" />
+                                                        <span class="lever"></span>
+                                                    </label>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-12" id="savecon" style="display: none;">
+                                        <div class="form-group">
+                                            <div class="text-center">
+                                                <button class="btn waves-effect btn-block waves-light darken-3" style="background-color: #dc3545;" id="sub_card_no"><b>Done Submit</b></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-12" id="send">
+                                        <div class="form-group">
+                                            <div class="text-center">
+                                                <div class="row">
+                                                    <div class="col s12 m6 l6">
+                                                    <button class="btn waves-effect btn-block waves-light light-blue darken-4" id="sub_card_no"><b>Save and Continue Later</b></button>
+                                                    </div>
+                                                    <div class="col s12 m6 l6">
+                                                    <a onclick="Popup=window.open('printpage','Popup','toolbar=no,location=0,status=no,menubar=yes,scrollbars=yes,resizable=no, width=800,height=1000,left=400,top=250' ).focus(); return false;" class="btn waves-effect btn-block waves-light light-blue darken-1" href="javascript(void)">
+                                                        Print Preview
+                                                    </a>
+                                                    </div>
+                                                </div>                                                
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                    <br>
+                    </div>
+                </form>
+
+
+            </div>
+        </div>
+    </div>
+
+</div>
