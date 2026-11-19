@@ -4,12 +4,13 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { CalendarDays, Check, X } from 'lucide-react'
 import { cn } from '@hrms/ui'
 import { api } from '#/lib/api-client'
-import type { Page } from '#/lib/api-client'
+import type { Option, Page } from '#/lib/api-client'
 import { date } from '#/lib/format'
 import { LEAVE_STATUS_LABELS } from '#/lib/labels'
 import { Button } from '#/components/ui/button'
 import { Textarea } from '#/components/ui/input'
 import { DataTable, Pagination, SearchInput, Toolbar } from '#/components/admin/data-table'
+import { Combobox } from '#/components/admin/combobox'
 import { Field } from '#/components/admin/form'
 import { FormDialog } from '#/components/admin/form-dialog'
 import { useSave } from '#/components/admin/mutations'
@@ -111,26 +112,38 @@ function LeaveManager() {
 
 function DecisionDialog({ deciding, onClose }: { deciding: { row: R; decision: 'approve' | 'reject' } | null; onClose: () => void }) {
   const [remark, setRemark] = useState('')
+  const [relievedBy, setRelievedBy] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const save = useSave((v: { id: number; decision: string; remark: string }) => api.post(`/portal/manage/leave/${v.id}/decision`, { decision: v.decision, remark: v.remark }), {
-    invalidate: ['portal'],
-    success: deciding?.decision === 'approve' ? 'Recommended and sent to HR' : 'Leave declined',
-    onDone: () => (setRemark(''), onClose()),
-    onError: setError,
-  })
   const r = deciding?.row
   const approve = deciding?.decision === 'approve'
+  const relievers = useQuery({
+    queryKey: ['portal', 'leave-relievers', r?.id],
+    queryFn: () => api.get<Array<Option>>(`/portal/manage/leave/${r!.id}/relievers`),
+    enabled: Boolean(approve && r),
+  })
+  const clear = () => (setRemark(''), setRelievedBy(null), setError(null))
+  const save = useSave((v: { id: number; decision: string; remark: string; relievedBy: number | null }) => api.post(`/portal/manage/leave/${v.id}/decision`, { decision: v.decision, remark: v.remark, relievedBy: v.relievedBy }), {
+    invalidate: ['portal'],
+    success: deciding?.decision === 'approve' ? 'Recommended and sent to HR' : 'Leave declined',
+    onDone: () => (clear(), onClose()),
+    onError: setError,
+  })
   return (
     <FormDialog
       open={Boolean(deciding)}
-      onOpenChange={(o) => !o && (onClose(), setError(null), setRemark(''))}
+      onOpenChange={(o) => !o && (onClose(), clear())}
       title={approve ? 'Recommend this leave?' : 'Decline this leave?'}
-      description={r ? `${r.fullName}: ${r.approvedDays} days from ${date(r.startDate, 'long')} to ${date(r.endDate, 'long')}.${r.applyNote ? ` Note: “${r.applyNote}”` : ''}` : undefined}
+      description={r ? `${r.fullName}: ${r.approvedDays} days from ${date(r.startDate, 'long')} to ${date(r.endDate, 'long')}, resuming ${date(r.resumeDate, 'long')}.${r.applyNote ? ` Note: “${r.applyNote}”` : ''}` : undefined}
       submitLabel={approve ? 'Recommend to HR' : 'Decline'}
       busy={save.isPending}
       error={error}
-      onSubmit={(e) => (e.preventDefault(), r && save.mutate({ id: r.id, decision: deciding!.decision, remark }))}
+      onSubmit={(e) => (e.preventDefault(), r && save.mutate({ id: r.id, decision: deciding!.decision, remark, relievedBy: approve ? relievedBy : null }))}
     >
+      {approve && (
+        <Field label="Reliever" className="sm:col-span-2" hint="Who covers this staff member’s duties while they are away. Colleagues already on leave then are not listed.">
+          <Combobox options={relievers.data} loading={relievers.isLoading} value={relievedBy} onChange={setRelievedBy} placeholder="Choose the reliever…" />
+        </Field>
+      )}
       <Field label={approve ? 'Remark (optional)' : 'Reason'} required={!approve} className="sm:col-span-2" hint={approve ? 'HR sees your remark.' : 'The staff member sees this reason.'}>
         <Textarea rows={3} value={remark} onChange={(e) => setRemark(e.target.value)} />
       </Field>

@@ -81,8 +81,8 @@ function PrintLeaveApplication() {
             <>
               <PrintSection>C. Annual leave position, {y.year}</PrintSection>
               <PrintTable
-                head={['Entitlement', 'Deferred in', 'Legacy balance', 'Constants (+/−)', 'Total', 'Taken', 'Remaining', 'This application']}
-                rows={[[num(y.entitlement), num(y.deferred), num(y.balance), `${y.constants > 0 ? '+' : ''}${num(y.constants)}`, <b>{num(y.total)}</b>, num(y.used), <b>{num(y.remaining)}</b>, num(l.approvedDays)]]}
+                head={['Entitlement', 'Deferred in', 'Legacy balance', 'Constants (+/−)', 'Total', 'Taken', 'Pending', 'Remaining', 'This application']}
+                rows={[[num(y.entitlement), num(y.deferred), num(y.balance), `${y.constants > 0 ? '+' : ''}${num(y.constants)}`, <b>{num(y.total)}</b>, num(y.used), num(y.pending), <b>{num(y.remaining)}</b>, num(l.approvedDays)]]}
               />
             </>
           )}

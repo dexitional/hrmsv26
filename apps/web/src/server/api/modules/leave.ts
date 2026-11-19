@@ -476,9 +476,15 @@ export async function checkApplication(
   let entitlement: number
   if (data.typeId === ANNUAL_TYPE) {
     const summary = await leaveYear(staff, year)
-    // An application being edited no longer counts against itself.
+    // An application being edited no longer counts against itself (granted
+    // and pending days are both subtracted from what remains for its year).
     const own = ignoreId
-      ? Number((await scalar("SELECT approved_days FROM leave_dump WHERE id = ? AND status = 'GRANTED'", [ignoreId])) ?? 0)
+      ? Number(
+          (await scalar(
+            "SELECT approved_days FROM leave_dump WHERE id = ? AND status IN ('GRANTED', 'ENDED', 'STAFF-PENDING', 'HEAD-PENDING', 'HR-PENDING') AND type_id = ? AND YEAR(start_date) = ?",
+            [ignoreId, ANNUAL_TYPE, year],
+          )) ?? 0,
+        )
       : 0
     entitlement = summary.remaining + own
     if (days > entitlement) throw new AppError(`Only ${entitlement} days of annual leave remain for ${year}; this period has ${days}.`, 422)

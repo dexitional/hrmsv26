@@ -24,6 +24,7 @@ import { RowActions } from '#/components/admin/row-actions'
 import { useCan } from '#/components/admin/session'
 import { StatusTabs } from '#/components/admin/status-tabs'
 import { StageBadge } from '#/components/study/stage-badge'
+import { IntentionDialog } from '#/components/study/intention-dialog'
 import { StudyLeaveDialog } from '#/components/study/leave-dialog'
 import type { StudyLeaveDraft } from '#/components/study/leave-dialog'
 
@@ -75,8 +76,13 @@ const STAGE_TABS = [
 
 function Intentions({ status, onStatus }: { status?: string; onStatus: (s?: string) => void }) {
   const navigate = useNavigate()
+  const canEdit = useCan('study', 'edit')
+  const canDelete = useCan('study', 'manage')
+  const { confirm, dialog } = useConfirm()
+  const [editing, setEditing] = useState<Row | null>(null)
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
+  const remove = useSave((id: number) => api.delete(`/study/intentions/${id}`), { invalidate: ['study-intentions'], success: 'Application deleted' })
   const { data, isLoading } = useQuery({
     queryKey: ['study-intentions', { status, q, page }],
     queryFn: () => api.get<Page<Row> & { counts: Array<{ status: string; count: number }> }>('/study/intentions', { stage: status, q, page }),
@@ -84,6 +90,8 @@ function Intentions({ status, onStatus }: { status?: string; onStatus: (s?: stri
   })
   return (
     <>
+      {dialog}
+      <IntentionDialog intention={editing} onClose={() => setEditing(null)} />
       <p className="mb-4 max-w-3xl text-sm text-muted-foreground">
         Applications filled in on the staff portal. Each is recommended by the head of unit, the dean or director and the provost before HR makes the final decision.
       </p>
@@ -121,6 +129,23 @@ function Intentions({ status, onStatus }: { status?: string; onStatus: (s?: stri
                 actions={[
                   { label: 'Open application', icon: Eye, onSelect: () => navigate({ to: '/admin/study/intention/$id', params: { id: String(r.id) } }) },
                   { label: 'Print form', icon: Printer, onSelect: () => window.open(`/print/study-intention/${r.id}`, '_blank') },
+                  { label: 'Edit form', icon: Pencil, hidden: !canEdit, onSelect: () => setEditing(r) },
+                  {
+                    label: 'Delete',
+                    icon: Trash2,
+                    danger: true,
+                    hidden: !canDelete,
+                    onSelect: () =>
+                      confirm({
+                        title: 'Delete this application?',
+                        description: r.leaveId
+                          ? 'Study leave was granted from this application. Delete that study leave record first.'
+                          : `The intention to study of ${r.fullName} and its approval trail are removed for good.`,
+                        confirmLabel: 'Delete',
+                        danger: true,
+                        onConfirm: () => remove.mutateAsync(r.id),
+                      }),
+                  },
                 ]}
               />
             ),

@@ -212,8 +212,8 @@ function PrintStaffProfile() {
           <PrintSection>Leave</PrintSection>
           {leave && (
             <PrintTable
-              head={['Annual leave', 'Entitlement', 'Deferred in', 'Balance', 'Constants', 'Total', 'Taken', 'Remaining']}
-              rows={[[String(leave.year), num(leave.entitlement), num(leave.deferred), num(leave.balance), `${leave.constants > 0 ? '+' : ''}${num(leave.constants)}`, num(leave.total), num(leave.used), num(leave.remaining)]]}
+              head={['Annual leave', 'Entitlement', 'Deferred in', 'Balance', 'Constants', 'Total', 'Taken', 'Pending', 'Remaining']}
+              rows={[[String(leave.year), num(leave.entitlement), num(leave.deferred), num(leave.balance), `${leave.constants > 0 ? '+' : ''}${num(leave.constants)}`, num(leave.total), num(leave.used), num(leave.pending), num(leave.remaining)]]}
             />
           )}
           <PrintTable

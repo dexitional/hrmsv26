@@ -223,10 +223,13 @@ function StaffProfile() {
                 <div
                   className="h-full rounded-full bg-chart-single"
                   style={{
-                    width: `${Math.min(100, (Number(leave?.used) / Math.max(1, Number(leave?.total))) * 100)}%`,
+                    width: `${Math.min(100, ((Number(leave?.used) + Number(leave?.pending ?? 0)) / Math.max(1, Number(leave?.total))) * 100)}%`,
                   }}
                 />
               </div>
+              {(leave?.pending > 0 || leave?.note) && (
+                <p className="mt-1.5 text-xs text-muted-foreground">{leave?.note ?? `${num(leave?.pending)} days in pending applications`}</p>
+              )}
             </div>
             <div className="rounded-2xl border bg-white p-4">
               <p className="eyebrow">Retirement</p>

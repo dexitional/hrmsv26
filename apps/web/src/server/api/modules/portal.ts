@@ -6,7 +6,7 @@
 //   GET  /api/portal/circulars         GET /api/portal/circulars/:id   (marks it read)
 //   GET  /api/portal/notifications     POST /api/portal/notifications/read
 //   GET  /api/portal/leave?year=       GET /api/portal/leave/:id
-//   GET  /api/portal/leave/types       GET /api/portal/leave/working-days?start=&end=
+//   GET  /api/portal/leave/types       GET /api/portal/leave/period?start=&days=
 //   POST /api/portal/leave             POST /api/portal/leave/:id/cancel
 //   GET  /api/portal/colleagues?q=     relievers to choose from
 //   GET  /api/portal/promotion          POST /api/portal/promotion (draft or submit)
@@ -27,7 +27,7 @@ import { audit } from '../lib/audit'
 import { loadPromotion, notifyLevelHeads, promotionState, resubmit, saveApplication, streamPromotionFile } from '../lib/promotion'
 import { exec, insert, like, one, paging, parseId, rows, scalar } from '../lib/db'
 import { AppError, notFound } from '../lib/errors'
-import { BRIEF_COLUMNS, PLACEMENT, countsWeekends, leaveYear, nameSql, requireStaff, workingDays } from '../lib/hr'
+import { BRIEF_COLUMNS, PLACEMENT, countsWeekends, leavePeriod, leaveYear, nameSql, requireStaff } from '../lib/hr'
 import { inList, leaveApprovees, requireStaffUser, teamUnits } from '../lib/portal'
 import { ATTACHMENT_EXTENSIONS, saveUpload } from '../lib/storage'
 import { validate } from '../lib/validate'
@@ -163,11 +163,12 @@ export const portalRoute = new Hono()
   // ------------------------------------------------------------ Leave
 
   .get('/leave/types', async (c) => c.json(await rows("SELECT id, title, `desc` AS description FROM leave_type WHERE active = 1 ORDER BY title")))
-  .get('/leave/working-days', async (c) => {
+  .get('/leave/period', async (c) => {
     const me = c.get('staff')
-    const { start, end } = c.req.query()
-    if (!start || !end || end < start) return c.json({ days: 0, resumeDate: null, holidays: [], includeWeekends: countsWeekends(me.staffGroup) })
-    return c.json(await workingDays(start, end, countsWeekends(me.staffGroup)))
+    const { start } = c.req.query()
+    const days = Number(c.req.query('days'))
+    if (!start || !/^\d{4}-\d{2}-\d{2}$/.test(start) || !(days >= 1)) return c.json(null)
+    return c.json(await leavePeriod(start, days, countsWeekends(me.staffGroup)))
   })
   .get('/leave', async (c) => {
     const me = c.get('staff')
@@ -202,22 +203,25 @@ export const portalRoute = new Hono()
   })
   .post('/leave', validate('json', portalLeaveSchema), async (c) => {
     const me = c.get('staff')
-    const data = c.req.valid('json')
+    const { days, ...data } = c.req.valid('json')
     if (!(await one('SELECT id FROM leave_type WHERE id = ? AND active = 1', [data.typeId]))) throw new AppError('That leave type is not open for applications.', 422)
-    if (data.relievedBy === me.staffNo) throw new AppError('Choose someone else as your reliever.', 422)
-    if (data.relievedBy) await requireStaff(data.relievedBy)
     const staff = await requireStaff(me.staffNo)
-    const counted = await checkApplication({ ...data, staffNo: me.staffNo }, staff, null)
+    // The staff member gives the days and the expected start; the last day and
+    // the resumption date follow from the calendar. The head names the reliever.
+    const period = await leavePeriod(data.startDate, days, countsWeekends(staff.staffGroup))
+    const counted = await checkApplication({ ...data, staffNo: me.staffNo, startDate: period.startDate, endDate: period.endDate }, staff, null)
     const id = await insert('leave_dump', {
       ...data,
       ...counted,
+      startDate: period.startDate,
+      endDate: period.endDate,
       staffNo: me.staffNo,
       status: 'HEAD-PENDING',
       appliedDate: new Date(),
       updatedAt: new Date(),
     })
-    audit(null, 'create', 'leave', id, say(me, `applied for ${counted.approvedDays} days of leave from ${data.startDate}`))
-    return c.json({ id, days: counted.approvedDays }, 201)
+    audit(null, 'create', 'leave', id, say(me, `applied for ${counted.approvedDays} days of leave from ${period.startDate}`))
+    return c.json({ id, days: counted.approvedDays, startDate: period.startDate, endDate: period.endDate, resumeDate: counted.resumeDate }, 201)
   })
   .post('/leave/:id/cancel', async (c) => {
     const me = c.get('staff')

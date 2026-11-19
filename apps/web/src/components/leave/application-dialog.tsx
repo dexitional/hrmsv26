@@ -70,7 +70,8 @@ export function LeaveApplicationDialog({ value, onClose }: { value: { row: Row |
   })
   const yearSummary = stats.data?.summary.find((s) => s.year === year)
   // When editing, this application's own days are not yet "used".
-  const remaining = yearSummary ? yearSummary.remaining + (row && row.status === 'GRANTED' ? Number(row.approvedDays) : 0) : null
+  const counted_ = row && ['GRANTED', 'ENDED', 'STAFF-PENDING', 'HEAD-PENDING', 'HR-PENDING'].includes(row.status) && String(row.startDate ?? '').startsWith(String(year))
+  const remaining = yearSummary ? yearSummary.remaining + (counted_ ? Number(row.approvedDays) : 0) : null
   const over = typeId === ANNUAL && remaining !== null && counted.data ? counted.data.days > remaining : false
 
   const save = useSave((v: In) => (row ? api.put(`/leave/records/${row.id}`, v) : api.post('/leave/records', v)), {

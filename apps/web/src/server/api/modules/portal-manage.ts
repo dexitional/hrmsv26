@@ -4,7 +4,8 @@
 //   GET  /api/portal/manage/scope
 //   GET  /api/portal/manage/staff?q=&unit=&group=&page=     GET /api/portal/manage/staff/:staffNo
 //   GET  /api/portal/manage/leave?view=pending|decided|all&page=
-//   POST /api/portal/manage/leave/:id/decision   { decision: approve | reject, remark }
+//   GET  /api/portal/manage/leave/:id/relievers?q=   colleagues free to cover the applicant's duties
+//   POST /api/portal/manage/leave/:id/decision   { decision: approve | reject, remark, relievedBy }
 //   GET  /api/portal/manage/promotions   GET /api/portal/manage/promotions/:id   GET /api/portal/manage/promotions/:id/file?path=
 //   POST /api/portal/manage/promotions/:id/action   { recommend | not_recommend | return | reverse }
 //   GET  /api/portal/manage/study   (read-only for now)
@@ -19,7 +20,7 @@ import { audit } from '../lib/audit'
 import { ACTIONABLE_STAGES, LEVEL_NAMES, actingLevels, headAction, loadPromotion, notifyApplicant, notifyLevelHeads, promotionState, streamPromotionFile } from '../lib/promotion'
 import { exec, like, one, paging, parseId, rows, scalar } from '../lib/db'
 import { AppError, notFound } from '../lib/errors'
-import { BRIEF_COLUMNS, PLACEMENT, leaveYear, nameSql, requireStaff } from '../lib/hr'
+import { BRIEF_COLUMNS, PLACEMENT, activeStaffSql, leaveYear, nameSql, requireStaff } from '../lib/hr'
 import { inList, leaveApprovees, requireManager, teamStaff, teamUnits } from '../lib/portal'
 import { validate } from '../lib/validate'
 
@@ -131,21 +132,56 @@ export const portalManageRoute = new Hono()
     ])
     return c.json({ data, total, page, pageSize, pending, decided })
   })
+  .get('/leave/:id/relievers', async (c) => {
+    const me = c.get('staff')
+    const leave = await one<{ staffNo: number; startDate: string; endDate: string; unitId: number | null }>(
+      `SELECT l.staff_no, l.start_date, l.end_date, u.id AS unit_id FROM leave_dump l JOIN staff s ON s.staff_no = l.staff_no ${PLACEMENT} WHERE l.id = ?`,
+      [parseId(c.req.param('id'))],
+    )
+    if (!leave || !(await leaveApprovees(me)).includes(leave.staffNo)) throw notFound('Leave application')
+    const q = (c.req.query('q') ?? '').trim()
+    // The applicant's own unit first, then the rest of the head's units; a search reaches anyone.
+    const units = [...new Set([...(leave.unitId ? [leave.unitId] : []), ...(await teamUnits(me))])]
+    const scope = q.length >= 2 ? `(${nameSql()} LIKE ? OR s.staff_no LIKE ?)` : units.length ? inList('u.id', units) : '1 = 0'
+    const found = await rows<{ value: number; fullName: string; unitName: string | null; unitId: number | null }>(
+      `SELECT s.staff_no AS value, ${nameSql()} AS full_name, u.long_name AS unit_name, u.id AS unit_id
+         FROM staff s ${PLACEMENT}
+        WHERE s.staff_no <> ? AND s.staff_no > 0 AND ${activeStaffSql()} AND COALESCE(s.flag_leave, 0) = 0 AND ${scope}
+          AND NOT EXISTS (SELECT 1 FROM leave_dump o WHERE o.staff_no = s.staff_no AND o.status IN ('HR-PENDING', 'GRANTED')
+                           AND o.start_date <= ? AND o.end_date >= ?)
+        ORDER BY u.id = ? DESC, full_name LIMIT 300`,
+      [leave.staffNo, ...(q.length >= 2 ? [like(q), like(q)] : units), leave.endDate, leave.startDate, leave.unitId ?? 0],
+    )
+    return c.json(found.map((r) => ({ value: r.value, label: r.fullName, hint: `${r.value}${r.unitName ? ` · ${r.unitName}` : ''}` })))
+  })
   .post('/leave/:id/decision', validate('json', leaveDecisionSchema), async (c) => {
     const me = c.get('staff')
     const id = parseId(c.req.param('id'))
-    const { decision, remark } = c.req.valid('json')
-    const leave = await one<{ staffNo: number; status: string; startDate: string; approvedDays: number }>(
-      'SELECT staff_no, status, start_date, approved_days FROM leave_dump WHERE id = ?',
+    const { decision, remark, relievedBy } = c.req.valid('json')
+    const leave = await one<{ staffNo: number; status: string; startDate: string; endDate: string; approvedDays: number; relievedBy: number | null }>(
+      'SELECT staff_no, status, start_date, end_date, approved_days, relieved_by FROM leave_dump WHERE id = ?',
       [id],
     )
     if (!leave || !(await leaveApprovees(me)).includes(leave.staffNo)) throw notFound('Leave application')
     const next = decision === 'approve' ? 'HR-PENDING' : 'HEAD-REJECTED'
+    // The head assigns the reliever when recommending the leave.
+    let reliever: { staffNo: number; fullName: string } | null = null
+    if (decision === 'approve' && relievedBy) {
+      if (relievedBy === leave.staffNo) throw new AppError('The reliever must be someone other than the applicant.', 422)
+      reliever = await one<{ staffNo: number; fullName: string }>(`SELECT s.staff_no, ${nameSql()} AS full_name FROM staff s WHERE s.staff_no = ? AND ${activeStaffSql()}`, [relievedBy])
+      if (!reliever) throw new AppError('That reliever is not an active member of staff.', 422)
+      const away = await one<{ id: number }>(
+        "SELECT id FROM leave_dump WHERE staff_no = ? AND status IN ('HR-PENDING', 'GRANTED') AND start_date <= ? AND end_date >= ? LIMIT 1",
+        [relievedBy, leave.endDate, leave.startDate],
+      )
+      if (away) throw new AppError(`${reliever.fullName} is also on leave during this period. Choose another reliever.`, 409)
+    }
     // Only from the head stage, and only once (a second click changes nothing).
     const done = await exec(
-      `UPDATE leave_dump SET status = ?, head_endorse = ?, head_date = CURDATE(), head_remark = ?, updated_at = NOW()
+      `UPDATE leave_dump SET status = ?, head_endorse = ?, head_date = CURDATE(), head_remark = ?,
+              relieved_by = ${decision === 'approve' ? '?' : 'relieved_by'}, updated_at = NOW()
         WHERE id = ? AND status IN ('HEAD-PENDING', 'STAFF-PENDING')`,
-      [next, me.staffNo, remark, id],
+      decision === 'approve' ? [next, me.staffNo, remark, reliever?.staffNo ?? null, id] : [next, me.staffNo, remark, id],
     )
     if (!done.affectedRows) throw new AppError('This application has already been decided.', 409)
     // Into the staff member's portal inbox, as the legacy portal did.
@@ -156,11 +192,17 @@ export const portalManageRoute = new Hono()
         leave.staffNo,
         `Leave ${decision === 'approve' ? 'Approval' : 'Rejection'} - Head`,
         decision === 'approve' ? 'Leave recommended' : 'Leave not recommended',
-        `Your leave application of ${leave.approvedDays} day(s) from ${leave.startDate} has been ${words}.`.replace(/[^\x00-\xFF]/g, ''),
+        `Your leave application of ${leave.approvedDays} day(s) from ${leave.startDate} has been ${words}.${reliever ? ` Your reliever is ${reliever.fullName}.` : ''}`.replace(/[^\x00-\xFF]/g, ''),
         decision === 'approve' ? '1' : '2',
       ],
     ).catch(() => undefined)
-    audit(null, 'update', 'leave', id, `Staff portal: ${me.fullName} (${me.staffNo}) ${decision === 'approve' ? 'recommended' : 'rejected'} leave #${id} of staff ${leave.staffNo}`)
+    audit(
+      null,
+      'update',
+      'leave',
+      id,
+      `Staff portal: ${me.fullName} (${me.staffNo}) ${decision === 'approve' ? 'recommended' : 'rejected'} leave #${id} of staff ${leave.staffNo}${reliever ? `, reliever ${reliever.fullName} (${reliever.staffNo})` : ''}`,
+    )
     return c.json({ ok: true, status: next })
   })
 

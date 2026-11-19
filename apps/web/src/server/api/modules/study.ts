@@ -8,15 +8,17 @@
 //
 //   GET  /api/study/intentions?stage=&q=&page=      GET /api/study/intentions/:id
 //   POST /api/study/intentions/:id/decide            approve | decline at the current stage
+//   PUT  /api/study/intentions/:id                   HR edits the form on the staff member's behalf
+//   DELETE /api/study/intentions/:id                 removes the application and its approval trail
 //   GET  /api/study/leaves?status=&q=&page=          CRUD /api/study/leaves[/:id]
 //   GET  /api/study/requests?status=&q=&page=        POST /api/study/requests/:id/decide
 //   CRUD /api/study/benefits
 import { Hono } from 'hono'
 import { STUDY_STAGES } from '@hrms/db'
-import { requestDecisionSchema, studyBenefitSchema, studyDecisionSchema, studyLeaveSchema } from '#/lib/schemas'
+import { requestDecisionSchema, studyBenefitSchema, studyDecisionSchema, studyIntentionSchema, studyLeaveSchema } from '#/lib/schemas'
 import { requirePermission } from '../lib/auth'
 import { audit } from '../lib/audit'
-import { exec, insert, like, one, paging, parseId, rows, scalar, update } from '../lib/db'
+import { exec, insert, like, one, paging, parseId, rows, scalar, update, withTransaction } from '../lib/db'
 import { AppError, notFound } from '../lib/errors'
 import { BRIEF_COLUMNS, PLACEMENT, idList, nameSql, requireStaff } from '../lib/hr'
 import { validate } from '../lib/validate'
@@ -40,6 +42,28 @@ const INTENTION_COLUMNS = `i.id, i.staff_no, ${nameSql()} AS full_name, i.colleg
   NULLIF(i.sub_date, '0000-00-00') AS sub_date, i.appstatus, i.stage_status, i.remarks, i.remark_reason, i.activity_date,
   u.long_name AS unit_name, j.title AS job_title,
   (SELECT sl.id FROM study_leave sl WHERE sl.intention_id = i.id LIMIT 1) AS leave_id`
+
+/** The answers on the intention form that HR may edit for the staff member, with how the activity log names them. */
+const INTENTION_LABELS: Record<string, string> = {
+  college: 'college',
+  department: 'department',
+  present_rank: 'present rank',
+  high_edu: 'highest qualification',
+  study_leave: 'previous study leave',
+  int_prog: 'programme',
+  study_place: 'place of study',
+  date_commence: 'commencement date',
+  prog_duration: 'duration',
+  prog_type: 'programme type',
+  study_mode: 'mode of study',
+  other_study_mode: 'other mode of study',
+  sponsor_kind: 'sponsorship',
+  other_scholarship: 'other scholarship',
+  estimated_fees: 'estimated fees',
+  prog_relevance: 'relevance',
+  sub_date: 'date signed',
+}
+const INTENTION_FORM = Object.keys(INTENTION_LABELS)
 
 const LEAVE_COLUMNS = `l.*, ${nameSql()} AS full_name, u.long_name AS unit_name, j.title AS job_title,
   DATEDIFF(l.study_end, CURDATE()) AS days_to_end, DATEDIFF(l.study_bond_end, CURDATE()) AS bond_days_left`
@@ -143,6 +167,56 @@ export const studyRoute = new Hono()
     })
     audit(me, 'update', 'study', id, `${approve ? 'Approved' : 'Declined'} intention to study of staff ${app.staffNo} (${STUDY_STAGES[next]})`)
     return c.json({ ok: true, appstatus: next })
+  })
+
+  .put('/intentions/:id', edit, validate('json', studyIntentionSchema), async (c) => {
+    const id = parseId(c.req.param('id'))
+    const me = c.get('user')
+    const d = c.req.valid('json')
+    const before = await one<Record<string, unknown>>(`SELECT ${INTENTION_FORM.join(', ')}, staff_no FROM study_intention WHERE id = ?`, [id])
+    if (!before) throw notFound('Application')
+    const values: Record<string, unknown> = {
+      college: d.college,
+      department: d.department,
+      present_rank: d.presentRank,
+      high_edu: d.highEdu,
+      study_leave: d.studyLeave,
+      int_prog: d.intProg,
+      study_place: d.studyPlace,
+      date_commence: d.dateCommence,
+      prog_duration: d.progDuration,
+      prog_type: d.progType,
+      study_mode: d.studyMode,
+      other_study_mode: d.studyMode === 'OTHERS' ? d.otherStudyMode : null,
+      sponsor_kind: d.sponsorKind,
+      other_scholarship: d.otherScholarship,
+      estimated_fees: d.estimatedFees,
+      prog_relevance: d.progRelevance,
+      sub_date: d.subDate,
+    }
+    // Which answers changed, for the activity log (camel-cased keys from the row mapper).
+    const camel = (k: string) => k.replace(/_([a-z])/g, (_, ch: string) => ch.toUpperCase())
+    const norm = (v: unknown) => (v == null || v === '' || v === '0000-00-00' ? '' : String(v).trim())
+    const changed = INTENTION_FORM.filter((k) => norm(before[camel(k)]) !== norm(values[k]))
+    if (!changed.length) return c.json({ ok: true, changed: 0 })
+    await exec(`UPDATE study_intention SET ${INTENTION_FORM.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, [...INTENTION_FORM.map((k) => values[k]), id])
+    audit(me, 'update', 'study', id, `Edited the intention to study of staff ${before.staffNo} on their behalf: ${changed.map((k) => INTENTION_LABELS[k]).join(', ')}`)
+    return c.json({ ok: true, changed: changed.length })
+  })
+  .delete('/intentions/:id', manage, async (c) => {
+    const id = parseId(c.req.param('id'))
+    const me = c.get('user')
+    const app = await one<{ staffNo: string; intProg: string | null }>('SELECT staff_no, int_prog FROM study_intention WHERE id = ?', [id])
+    if (!app) throw notFound('Application')
+    const leave = await scalar('SELECT id FROM study_leave WHERE intention_id = ? LIMIT 1', [id])
+    if (leave) throw new AppError(`Study leave #${leave} was granted from this application. Delete that study leave record first.`, 409)
+    const trail = await withTransaction(async (conn) => {
+      const a = await exec('DELETE FROM tndstudy_activities WHERE studyform_id = ?', [id], conn)
+      await exec('DELETE FROM study_intention WHERE id = ?', [id], conn)
+      return a.affectedRows
+    })
+    audit(me, 'delete', 'study', id, `Deleted the intention to study of staff ${app.staffNo}${app.intProg ? ` (${String(app.intProg).slice(0, 80)})` : ''} and ${trail} approval record${trail === 1 ? '' : 's'}`)
+    return c.json({ ok: true })
   })
 
   // ------------------------------------------------------------ Study leave grants

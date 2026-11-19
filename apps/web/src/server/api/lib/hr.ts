@@ -130,20 +130,41 @@ export interface LeaveYear {
   entitlement: number
   constants: number
   balance: number
+  /** Approved deferment carried in from the previous year. */
   deferred: number
+  /** Approved deferment of this year's leave, carried to the next year. */
+  deferredOut: number
   total: number
+  /** Days on granted or ended annual leave starting this year. */
   used: number
+  /** Days on applications still with the head or HR. */
+  pending: number
   remaining: number
   adjustments: Array<{ desc: string; type: 'ADD' | 'SUB'; weight: number }>
+  /** Why the entitlement is what it is, when it is not the usual rule. */
+  note: string | null
 }
 
 /**
- * Annual leave for one staff member and year:
- *   entitlement (leave_weight for their category, or their designation)
- * + leave constants for the year (ADD/SUB), unless they are excluded
- * + legacy balances granted for the year (leave_balance)
- * + approved deferment carried from the previous year (leave_defer)
- * − days approved on granted/ended annual leave that started that year.
+ * Annual leave for one staff member and year, following the legacy rules:
+ *
+ *   entitlement  leave_weight for their category: the row naming their
+ *                designation if there is one, otherwise the category's first
+ *                general row (the legacy system read the first; Senior Staff
+ *                have a second, unused 35-day row). Academic Senior Members
+ *                have no annual leave (they take vacation): 0.
+ * + constants    the year's leave_constant rows for their category (ADD/SUB),
+ *                unless they are in its exclusion list
+ * + balance      the staff member's active legacy balance (leave_balance). HR keeps one
+ *                active row per person and switches it off once it is used up; it
+ *                counts from the year it was recorded onwards, as the old portal did
+ * + deferred     approved deferment of the previous year's leave (leave_defer)
+ * − deferredOut  approved deferment of this year's leave (it moves to next year)
+ * = total
+ * − used         days on granted/ended annual leave starting that year
+ * − pending      days on applications still with the head or HR (so two
+ *                pending applications cannot together exceed the total)
+ * = remaining
  */
 export async function leaveYear(staff: StaffBrief, year: number): Promise<LeaveYear> {
   const weights = await rows<{ id: number; jobs: string | null; weight: number }>(
@@ -151,8 +172,16 @@ export async function leaveYear(staff: StaffBrief, year: number): Promise<LeaveY
     [ANNUAL_LEAVE_TYPE, staff.staffGroup],
   )
   const byJob = weights.find((w) => staff.jobId && idList(w.jobs).includes(staff.jobId))
-  const general = [...weights].reverse().find((w) => !w.jobs)
-  const entitlement = Number((byJob ?? general)?.weight ?? 0)
+  const general = weights.find((w) => !w.jobs)
+  let entitlement = Number((byJob ?? general)?.weight ?? 0)
+  let note: string | null = null
+  if (staff.staffGroup === 'SM') {
+    const job = staff.jobId ? await one<{ type: string | null }>('SELECT type FROM job WHERE id = ?', [staff.jobId]) : null
+    if (job?.type === 'ACADEMIC') {
+      entitlement = 0
+      note = 'Academic senior members take vacation, not annual leave.'
+    }
+  }
 
   const constantRows = await rows<{ desc: string; type: 'ADD' | 'SUB'; weight: number; exclusion: string | null }>(
     'SELECT `desc`, type, weight, exclusion FROM leave_constant WHERE active = 1 AND year = ? AND (category IS NULL OR category = ?)',
@@ -163,20 +192,33 @@ export async function leaveYear(staff: StaffBrief, year: number): Promise<LeaveY
     .map((c) => ({ desc: c.desc, type: c.type, weight: Number(c.weight) }))
   const constants = adjustments.reduce((s, c) => s + (c.type === 'ADD' ? c.weight : -c.weight), 0)
 
-  const [extra] = await rows<{ balance: number; deferred: number; used: number }>(
+  const [extra] = await rows<{ balance: number; deferred: number; deferredOut: number; used: number; pending: number }>(
     `SELECT
-       (SELECT COALESCE(SUM(weight), 0) FROM leave_balance WHERE staff_no = ? AND year = ? AND active = '1') AS balance,
+       (SELECT COALESCE(SUM(weight), 0) FROM leave_balance WHERE staff_no = ? AND year <= ? AND active = '1') AS balance,
        (SELECT COALESCE(SUM(weight), 0) FROM leave_defer
          WHERE staff_no = ? AND year = ? AND approved_status = 1 AND active = '1') AS deferred,
+       (SELECT COALESCE(SUM(weight), 0) FROM leave_defer
+         WHERE staff_no = ? AND year = ? AND approved_status = 1 AND active = '1') AS deferred_out,
        (SELECT COALESCE(SUM(approved_days), 0) FROM leave_dump
-         WHERE staff_no = ? AND type_id = ? AND status IN ('GRANTED', 'ENDED') AND YEAR(start_date) = ?) AS used`,
-    [staff.staffNo, year, staff.staffNo, year - 1, staff.staffNo, ANNUAL_LEAVE_TYPE, year],
+         WHERE staff_no = ? AND type_id = ? AND status IN ('GRANTED', 'ENDED') AND YEAR(start_date) = ?) AS used,
+       (SELECT COALESCE(SUM(approved_days), 0) FROM leave_dump
+         WHERE staff_no = ? AND type_id = ? AND status IN ('STAFF-PENDING', 'HEAD-PENDING', 'HR-PENDING') AND YEAR(start_date) = ?) AS pending`,
+    [
+      staff.staffNo, year,
+      staff.staffNo, year - 1,
+      staff.staffNo, year,
+      staff.staffNo, ANNUAL_LEAVE_TYPE, year,
+      staff.staffNo, ANNUAL_LEAVE_TYPE, year,
+    ],
   )
   const balance = Number(extra?.balance ?? 0)
   const deferred = Number(extra?.deferred ?? 0)
+  const deferredOut = Number(extra?.deferredOut ?? 0)
   const used = Number(extra?.used ?? 0)
-  const total = entitlement + constants + balance + deferred
-  return { year, entitlement, constants, balance, deferred, total, used, remaining: total - used, adjustments }
+  const pending = Number(extra?.pending ?? 0)
+  // Never below zero (an academic senior member with no balance, after a deduction).
+  const total = Math.max(0, entitlement + constants + balance + deferred - deferredOut)
+  return { year, entitlement, constants, balance, deferred, deferredOut, total, used, pending, remaining: total - used - pending, adjustments, note }
 }
 
 /**
@@ -230,6 +272,48 @@ export async function workingDays(start: string, end: string, includeWeekends = 
     days,
     resumeDate: iso(resume),
     holidays: holidays.filter((h) => h.holiday >= start && h.holiday <= end).map((h) => ({ date: h.holiday, desc: h.desc })),
+    includeWeekends,
+  }
+}
+
+/**
+ * The leave period for a number of leave days from an expected start date,
+ * the way the staff portal applies: the leave starts on the first chargeable
+ * day on or after the date asked for (a weekday for Junior/Senior Staff, any
+ * day for Senior Members; never a public holiday), ends on the day the last
+ * leave day is used, and the staff member resumes on the next working day.
+ */
+export async function leavePeriod(start: string, days: number, includeWeekends = false) {
+  const n = Math.max(1, Math.min(366, Math.floor(days)))
+  // Generous horizon: holidays and weekends stretch the calendar span.
+  const horizon = parseDay(start)
+  horizon.setDate(horizon.getDate() + Math.ceil(n * (includeWeekends ? 1.2 : 1.6)) + 60)
+  const holidays = await rows<{ holiday: string; desc: string }>(
+    'SELECT holiday, `desc` FROM leave_exclude WHERE active = 1 AND holiday BETWEEN ? AND ?',
+    [start, iso(horizon)],
+  )
+  const off = new Set(holidays.map((h) => h.holiday))
+  const weekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6
+  const counts = (d: Date) => !off.has(iso(d)) && (includeWeekends || !weekend(d))
+  const d = parseDay(start)
+  while (!counts(d)) d.setDate(d.getDate() + 1)
+  const startDate = iso(d)
+  for (let used = 1; used < n; ) {
+    d.setDate(d.getDate() + 1)
+    if (counts(d)) used++
+  }
+  const endDate = iso(d)
+  do d.setDate(d.getDate() + 1)
+  while (weekend(d) || off.has(iso(d)))
+  return {
+    days: n,
+    startDate,
+    endDate,
+    resumeDate: iso(d),
+    // Only holidays that would otherwise have been charged (not a Saturday holiday for weekday staff).
+    holidays: holidays
+      .filter((h) => h.holiday >= startDate && h.holiday <= endDate && (includeWeekends || !weekend(parseDay(h.holiday))))
+      .map((h) => ({ date: h.holiday, desc: h.desc })),
     includeWeekends,
   }
 }

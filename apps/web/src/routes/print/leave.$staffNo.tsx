@@ -35,15 +35,17 @@ function PrintLeave() {
           />
           <PrintSection>Annual leave by year</PrintSection>
           <PrintTable
-            head={['Year', 'Entitlement', 'Constants (+/−)', 'Legacy balance', 'Deferred in', 'Total', 'Days taken', 'Remaining']}
+            head={['Year', 'Entitlement', 'Constants (+/−)', 'Legacy balance', 'Deferred in', 'Deferred out', 'Total', 'Days taken', 'Pending', 'Remaining']}
             rows={data.summary.map((y) => [
               y.year,
               num(y.entitlement),
               `${y.constants > 0 ? '+' : ''}${num(y.constants)}`,
               num(y.balance),
               num(y.deferred),
+              y.deferredOut ? `−${num(y.deferredOut)}` : '0',
               <b>{num(y.total)}</b>,
               num(y.used),
+              num(y.pending),
               <b>{num(y.remaining)}</b>,
             ])}
           />

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { z } from 'zod'
-import { CheckCircle2, GraduationCap, Printer, XCircle } from 'lucide-react'
+import { CheckCircle2, GraduationCap, Pencil, Printer, Trash2, XCircle } from 'lucide-react'
 import { cn } from '@hrms/ui'
 import { api } from '#/lib/api-client'
 import { date, dateTime } from '#/lib/format'
@@ -13,12 +13,14 @@ import { studyDecisionSchema } from '#/lib/schemas'
 import { Button } from '#/components/ui/button'
 import { Card, CardBody, CardHeader } from '#/components/ui/card'
 import { Textarea } from '#/components/ui/input'
+import { useConfirm } from '#/components/admin/confirm'
 import { Field } from '#/components/admin/form'
 import { FormDialog } from '#/components/admin/form-dialog'
 import { useSave } from '#/components/admin/mutations'
 import { DetailList, EmptyState, PageHeader, StaffCell } from '#/components/admin/page'
 import { useCan } from '#/components/admin/session'
 import { ProfileSkeleton } from '#/components/admin/skeletons'
+import { IntentionDialog } from '#/components/study/intention-dialog'
 import { StudyLeaveDialog } from '#/components/study/leave-dialog'
 import type { StudyLeaveDraft } from '#/components/study/leave-dialog'
 import { StageBadge } from '#/components/study/stage-badge'
@@ -38,10 +40,19 @@ function years(text: string | null | undefined) {
 
 function IntentionPage() {
   const { id } = Route.useParams()
+  const navigate = useNavigate()
   const canEdit = useCan('study', 'edit')
+  const canDelete = useCan('study', 'manage')
+  const { confirm, dialog } = useConfirm()
   const [deciding, setDeciding] = useState<'approve' | 'decline' | null>(null)
   const [grant, setGrant] = useState<StudyLeaveDraft | null>(null)
+  const [editing, setEditing] = useState<R | null>(null)
   const { data: a, isLoading } = useQuery({ queryKey: ['study-intention', id], queryFn: () => api.get<R>(`/study/intentions/${id}`) })
+  const remove = useSave(() => api.delete(`/study/intentions/${id}`), {
+    invalidate: ['study-intentions'],
+    success: 'Application deleted',
+    onDone: () => navigate({ to: '/admin/study' }),
+  })
   if (isLoading) return <ProfileSkeleton />
   if (!a) return <EmptyState title="Application not found" />
   const stage = Number(a.appstatus)
@@ -63,6 +74,8 @@ function IntentionPage() {
     <>
       <DecisionDialog id={id} decision={deciding} stageLabel={a.stageLabel} onClose={() => setDeciding(null)} />
       <StudyLeaveDialog value={grant} onClose={() => setGrant(null)} />
+      <IntentionDialog intention={editing} onClose={() => setEditing(null)} />
+      {dialog}
       <PageHeader
         back={{ to: '/admin/study', label: 'Study Leave' }}
         eyebrow={`Intention to study #${a.id}`}
@@ -74,6 +87,30 @@ function IntentionPage() {
             <Button variant="outline" onClick={() => window.open(`/print/study-intention/${a.id}`, '_blank')}>
               <Printer /> Print form
             </Button>
+            {canEdit && (
+              <Button variant="outline" onClick={() => setEditing(a)}>
+                <Pencil /> Edit form
+              </Button>
+            )}
+            {canDelete && (
+              <Button
+                variant="outline"
+                aria-label="Delete application"
+                onClick={() =>
+                  confirm({
+                    title: 'Delete this application?',
+                    description: a.leaveId
+                      ? 'Study leave was granted from this application. Delete that study leave record first.'
+                      : `The intention to study of ${a.fullName} and its approval trail (${a.activities.length} record${a.activities.length === 1 ? '' : 's'}) are removed for good.`,
+                    confirmLabel: 'Delete',
+                    danger: true,
+                    onConfirm: () => remove.mutateAsync(undefined),
+                  })
+                }
+              >
+                <Trash2 />
+              </Button>
+            )}
             {canEdit && open && (
               <>
                 <Button variant="outline" onClick={() => setDeciding('decline')}>

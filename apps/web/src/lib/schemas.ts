@@ -399,6 +399,38 @@ export const studyDecisionSchema = z.object({
   comments: req(2000, 'Add a comment for the record'),
 })
 
+export const STUDY_MODES = ['REGULAR', 'SANDWICH', 'WEEKEND', 'ONLINE', 'EVENING', 'OTHERS'] as const
+export const STUDY_SPONSORSHIPS = ['Study leave with pay only', 'Study leave without pay only', 'Study leave with pay and additional packages'] as const
+
+/**
+ * The declaration of intention to pursue further studies, as the staff
+ * portal's form has it (legacy study_intention columns and sizes). HR edits
+ * it on a staff member's behalf; the approval stage is not changed here.
+ */
+export const studyIntentionSchema = z
+  .object({
+    college: opt(150),
+    department: opt(150),
+    presentRank: opt(150),
+    highEdu: opt(2000),
+    studyLeave: opt(40),
+    intProg: req(2000, 'Enter the intended programme'),
+    studyPlace: req(2000, 'Enter the intended place of study'),
+    dateCommence: optDate,
+    progDuration: opt(15),
+    progType: z.enum(['1', '2'], { error: 'Choose full- or part-time' }),
+    studyMode: z.enum(STUDY_MODES, { error: 'Choose the mode of study' }),
+    otherStudyMode: opt(200),
+    sponsorKind: optEnum(STUDY_SPONSORSHIPS),
+    otherScholarship: opt(80),
+    estimatedFees: z.preprocess(emptyToNull, z.string().trim().regex(/^\d{1,12}(\.\d{1,2})?$/, 'Enter an amount, e.g. 4500.00').nullable()),
+    progRelevance: opt(5000),
+    subDate: optDate,
+  })
+  .superRefine((v, ctx) => {
+    if (v.studyMode === 'OTHERS' && !v.otherStudyMode) ctx.addIssue({ code: 'custom', path: ['otherStudyMode'], message: 'Specify the mode of study' })
+  })
+
 export const studyLeaveSchema = z
   .object({
     staffNo,
@@ -549,18 +581,20 @@ export const circularSchema = circularAudienceSchema
 
 // ---------------------------------------------------------------- Staff portal
 
-/** A staff member's own leave application (the staff number comes from the session). */
+/**
+ * A staff member's own leave application (the staff number comes from the
+ * session): how many leave days and the expected start date. The server works
+ * out the last day and the resumption date; the head assigns the reliever.
+ */
 export const portalLeaveSchema = z
   .object({
     typeId: id('Choose the leave type'),
+    days: z.coerce.number({ error: 'Enter the number of leave days' }).int('Whole days only').min(1, 'Enter at least 1 day').max(366),
     startDate: date,
-    endDate: date,
-    relievedBy: optStaffNo,
     emergencyContact: opt(20),
     emergencyNote: opt(1000),
     applyNote: opt(2000),
   })
-  .superRefine(datesInOrder('startDate', 'endDate'))
   .superRefine((v, ctx) => {
     const today = new Date().toISOString().slice(0, 10)
     if (v.startDate < today) ctx.addIssue({ code: 'custom', path: ['startDate'], message: 'Leave cannot start in the past' })
@@ -604,6 +638,8 @@ export const leaveDecisionSchema = z
   .object({
     decision: z.enum(['approve', 'reject']),
     remark: opt(1000),
+    /** The head assigns who covers the staff member's duties while away. */
+    relievedBy: optStaffNo,
   })
   .superRefine((v, ctx) => {
     if (v.decision === 'reject' && !v.remark) ctx.addIssue({ code: 'custom', path: ['remark'], message: 'Give a reason for rejecting' })
