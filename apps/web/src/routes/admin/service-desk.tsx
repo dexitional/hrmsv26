@@ -20,7 +20,7 @@ import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES } from '#/components/portal
 export const Route = createFileRoute('/admin/service-desk')({ component: ServiceDesk })
 
 type R = Record<string, any>
-const CATEGORIES: Record<string, string> = { IT: 'IT helpdesk', EDUROAM: 'Eduroam & Wi-Fi', XPAY: 'XPay', COUNSELLING: 'Counselling', HR: 'HR enquiry' }
+const CATEGORIES: Record<string, string> = { IT: 'Helpdesk & Support', EDUROAM: 'Eduroam & Wi-Fi', COUNSELLING: 'Counselling', HR: 'HR enquiry' }
 
 function ServiceDesk() {
   const canEdit = useCan('servicedesk', 'edit')
@@ -38,7 +38,7 @@ function ServiceDesk() {
   return (
     <>
       <ReplyDialog request={replying} onClose={() => setReplying(null)} />
-      <PageHeader eyebrow="System" title="Service desk" description="Requests staff raise from the staff portal: IT helpdesk, Eduroam & Wi-Fi, XPay and counselling. Replies go to the staff member’s portal inbox." />
+      <PageHeader eyebrow="System" title="Service desk" description="Requests staff raise from the staff portal: Helpdesk & Support, Eduroam & Wi-Fi and counselling. Replies go to the staff member’s portal inbox." />
       <StatusTabs
         value={status}
         onChange={(s) => (setStatus(s), reset())}

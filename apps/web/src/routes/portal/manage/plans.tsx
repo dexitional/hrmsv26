@@ -1,19 +1,22 @@
 // Operational Plan manager: the operational plans of the units a head heads
 // (and, read-only, of the units below them), and the plan form from the old
 // portal: objective, output, outcome, impact, key activity and the review.
+// The longer answers are rich text (bold, lists, tables pasted from Word); the
+// server cleans the HTML before saving.
 import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { z } from 'zod'
 import { Eye, FilePlus2, Pencil, Target } from 'lucide-react'
 import { api } from '#/lib/api-client'
 import { date } from '#/lib/format'
-import { PLAN_STATUSES, operationalPlanSchema } from '#/lib/schemas'
+import { PLAN_RICH_FIELDS, PLAN_STATUSES, operationalPlanSchema } from '#/lib/schemas'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Input, NativeSelect, Textarea } from '#/components/ui/input'
+import { RichTextEditor } from '#/components/ui/rich-text-editor'
 import { DataTable, FilterSelect, SearchInput, Toolbar } from '#/components/admin/data-table'
 import { Field } from '#/components/admin/form'
 import { FormDialog } from '#/components/admin/form-dialog'
@@ -98,6 +101,22 @@ function PlansManager() {
   )
 }
 
+const RICH = PLAN_RICH_FIELDS
+
+/** Saved rich text, read-only (cleaned on the server); older plans hold plain text. */
+function RichView({ html }: { html: unknown }) {
+  const v = String(html ?? '').trim()
+  if (!v) return <p className="rounded-xl border border-dashed px-3.5 py-2.5 text-sm text-muted-foreground">—</p>
+  return /<[a-z][\s\S]*>/i.test(v) ? (
+    <div
+      className="rich-text rounded-xl border bg-slate-50/60 px-3.5 py-2.5 text-sm text-slate-800 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1 [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:px-2 [&_th]:py-1 [&_ul]:list-disc [&_ul]:pl-5"
+      dangerouslySetInnerHTML={{ __html: v }}
+    />
+  ) : (
+    <p className="rounded-xl border bg-slate-50/60 px-3.5 py-2.5 text-sm whitespace-pre-line text-slate-800">{v}</p>
+  )
+}
+
 const Section = ({ children, hint }: { children: React.ReactNode; hint?: string }) => (
   <div className="border-b border-dashed pt-2 pb-1 sm:col-span-2">
     <p className="eyebrow">{children}</p>
@@ -139,7 +158,7 @@ const EMPTY: In = {
 function PlanDialog({ id, units, onClose }: { id: number | null; units: Array<{ value: number; label: string }>; onClose: () => void }) {
   const [error, setError] = useState<string | null>(null)
   const plan = useQuery({ queryKey: ['portal', 'manage-plan', id], queryFn: () => api.get<R>(`/portal/manage/plans/${id}`), enabled: id !== null })
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<In>({ resolver: zodResolver(operationalPlanSchema), defaultValues: { ...EMPTY, unitId: (units.length === 1 ? units[0]!.value : '') as never } })
+  const { register, control, handleSubmit, reset, formState: { errors } } = useForm<In>({ resolver: zodResolver(operationalPlanSchema), defaultValues: { ...EMPTY, unitId: (units.length === 1 ? units[0]!.value : '') as never } })
   useEffect(() => {
     const p = plan.data
     if (!p) return
@@ -155,7 +174,17 @@ function PlanDialog({ id, units, onClose }: { id: number | null; units: Array<{ 
   const err = (k: keyof In) => (errors[k] as { message?: string } | undefined)?.message
   const text = (name: keyof In, label: string, required = false, rows = 2) => (
     <Field label={label} required={required && !readOnly} error={err(name)} className="sm:col-span-2">
-      <Textarea rows={rows} disabled={Boolean(readOnly)} {...register(name)} />
+      {!(RICH as ReadonlyArray<string>).includes(name) ? (
+        <Textarea rows={rows} disabled={Boolean(readOnly)} {...register(name)} />
+      ) : readOnly ? (
+        <RichView html={plan.data?.[name]} />
+      ) : (
+        <Controller
+          control={control}
+          name={name}
+          render={({ field }) => <RichTextEditor value={field.value as string} onChange={field.onChange} minHeight={rows * 32 + 24} invalid={Boolean(err(name))} placeholder="Type here, or paste from Word…" />}
+        />
+      )}
     </Field>
   )
   const short = (name: keyof In, label: string, required = false) => (

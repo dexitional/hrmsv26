@@ -48,7 +48,7 @@ function Overview() {
         {staff.isManager ? (
           <StatCard icon={Users} label="Leave to review" value={num(data.approvals)} sub={data.approvals ? 'Applications from your staff' : 'Nothing waiting for you'} />
         ) : (
-          <StatCard icon={LifeBuoy} label="Open requests" value={num(data.openRequests)} sub="Helpdesk, Eduroam, XPay, counselling" />
+          <StatCard icon={LifeBuoy} label="Open requests" value={num(data.openRequests)} sub="Helpdesk, Eduroam, counselling" />
         )}
       </div>
 

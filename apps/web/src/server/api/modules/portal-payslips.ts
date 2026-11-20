@@ -8,14 +8,17 @@
 //   POST /api/portal/payslips/unlock     { pin }   opens payslips in this browser for 15 minutes
 //   POST /api/portal/payslips/lock
 //   GET  /api/portal/payslips/:id        one payslip (needs the unlock while the lock is on)
+//   GET  /api/portal/payslips/xpay       POST /api/portal/payslips/xpay-password { password, confirm }   reset the XPay login
 import { Hono } from 'hono'
-import { payslipPinSchema, payslipUnlockSchema } from '#/lib/schemas'
+import { payslipPinSchema, payslipUnlockSchema, xpayPasswordSchema } from '#/lib/schemas'
 import { audit } from '../lib/audit'
 import { exec, parseId, rows } from '../lib/db'
 import { AppError, notFound } from '../lib/errors'
 import { RELEASED, checkPin, grantUnlock, loadPayslip, pinState, recordView, revokeUnlock, setPin, unlockedUntil } from '../lib/payslips'
 import { requireStaffUser } from '../lib/portal'
 import { validate } from '../lib/validate'
+import { rateLimit } from '../lib/rate-limit'
+import { resetXpayPassword, xpayConfigured, xpayUsername } from '../lib/xpay'
 
 const say = (me: { fullName: string; staffNo: number }, what: string) => `Staff portal: ${me.fullName} (${me.staffNo}) ${what}`
 
@@ -68,6 +71,21 @@ export const portalPayslipsRoute = new Hono()
     const me = c.get('staff')
     await checkPin(me.staffNo, c.req.valid('json').pin)
     return c.json({ ok: true, unlockedUntil: await grantUnlock(c, me.staffNo) })
+  })
+
+  // XPay (the payslip portal) password: the staff member's own account only.
+  .get('/xpay', (c) => {
+    const me = c.get('staff')
+    return c.json({ configured: xpayConfigured(), username: xpayUsername(me.uccMail) })
+  })
+  .post('/xpay-password', rateLimit('xpay-password', 5, 15 * 60), validate('json', xpayPasswordSchema), async (c) => {
+    const me = c.get('staff')
+    const username = xpayUsername(me.uccMail)
+    if (!username) throw new AppError('Your staff record has no UCC email, which is your XPay username. Ask HR to add it.', 422)
+    const changed = await resetXpayPassword(username, c.req.valid('json').password)
+    if (!changed) throw new AppError(`No XPay account was found for ${username}. Contact the Directorate of Finance.`, 404)
+    audit(null, 'update', 'xpay_password', me.staffNo, say(me, `reset their XPay password (${username})`))
+    return c.json({ ok: true, username })
   })
 
   .post('/lock', (c) => {

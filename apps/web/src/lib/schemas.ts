@@ -618,7 +618,7 @@ export const contactUpdateSchema = z.object({
   nhisExpireDate: optDate,
 })
 
-export const SERVICE_CATEGORIES = ['IT', 'EDUROAM', 'XPAY', 'COUNSELLING', 'HR'] as const
+export const SERVICE_CATEGORIES = ['IT', 'EDUROAM', 'COUNSELLING', 'HR'] as const
 export const SERVICE_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] as const
 
 export const serviceRequestSchema = z.object({
@@ -816,34 +816,53 @@ export const PLAN_STATUSES = ['Not Started', 'On Hold', 'Defered', 'Discontinued
  * (with budget, targets, risks, responsibility and means of verification),
  * its output, outcome and impact, the key activity, and the review.
  */
+/** Rich-text (HTML) fields of the operational plan form; the server cleans them before saving. */
+export const PLAN_RICH_FIELDS = [
+  'projectSummary',
+  'performanceIndicators',
+  'riskAssump',
+  'outputSummary',
+  'outputIndicators',
+  'outcomeSummary',
+  'outcomeIndicators',
+  'impactSummary',
+  'impactIndicators',
+  'activitySummary',
+  'activityIndicators',
+  'opportunities',
+  'challenges',
+  'actionTaken',
+  'remarks',
+] as const
+
 export const operationalPlanSchema = z.object({
   unitId: id('Choose the unit'),
-  projectSummary: req(5000, 'Describe the objective'),
-  performanceIndicators: req(5000, 'Give the performance indicators'),
+  projectSummary: req(20000, 'Describe the objective'),
+  performanceIndicators: req(20000, 'Give the performance indicators'),
   ucspLink: req(200, 'Give the link to the UCSP, e.g. UCSP 5.2'),
   bEstimated: opt(100),
   bActual: opt(100),
-  riskAssump: opt(5000),
+  riskAssump: opt(20000),
   responsibility: opt(200),
   tEstimated: opt(100),
   tActual: opt(100),
   sourcesMeans: opt(255),
-  outputSummary: req(5000, 'Describe the output'),
-  outputIndicators: req(5000, 'Give the output indicators'),
-  outcomeSummary: req(5000, 'Describe the outcome'),
-  outcomeIndicators: req(5000, 'Give the outcome indicators'),
-  impactSummary: req(5000, 'Describe the impact'),
-  impactIndicators: req(5000, 'Give the impact indicators'),
-  activitySummary: opt(5000),
-  activityIndicators: opt(5000),
+  outputSummary: req(20000, 'Describe the output'),
+  outputIndicators: req(20000, 'Give the output indicators'),
+  outcomeSummary: req(20000, 'Describe the outcome'),
+  outcomeIndicators: req(20000, 'Give the outcome indicators'),
+  impactSummary: req(20000, 'Describe the impact'),
+  impactIndicators: req(20000, 'Give the impact indicators'),
+  activitySummary: opt(20000),
+  activityIndicators: opt(20000),
   activityBEstimated: opt(100),
   activityBActual: opt(100),
   activityTEstimated: opt(100),
   activityTActual: opt(100),
-  opportunities: opt(5000),
-  challenges: opt(5000),
-  actionTaken: opt(5000),
-  remarks: opt(5000),
+  opportunities: opt(20000),
+  challenges: opt(20000),
+  actionTaken: opt(20000),
+  remarks: opt(20000),
   rStatus: optEnum(PLAN_STATUSES),
 })
 
@@ -867,3 +886,19 @@ export const procurementRequestSchema = z.object({
     .max(100),
   submit: z.boolean().default(false),
 })
+
+/** A head names (or clears) the staff member who raises procurement requests for a unit (unit.apply_procure). */
+export const procurementAssignSchema = z.object({
+  unitId: id('Choose the unit'),
+  staffNo: z.coerce.number().int().positive().nullable(),
+})
+
+/** A staff member's new XPay password (the payslip portal's own login). */
+export const xpayPasswordSchema = z
+  .object({
+    password: z.string().min(8, 'Use at least 8 characters').max(128),
+    confirm: z.string(),
+  })
+  .superRefine((v, ctx) => {
+    if (v.password !== v.confirm) ctx.addIssue({ code: 'custom', path: ['confirm'], message: 'The two passwords do not match' })
+  })

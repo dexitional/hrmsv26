@@ -90,6 +90,8 @@ export interface PortalUser {
   headTitle: string | null
   /** True when they approve anything: they head a unit or are a named leave approver. */
   isManager: boolean
+  /** Units whose head has assigned them to raise procurement requests (unit.apply_procure). */
+  procures: Array<{ unitId: number; unitName: string }>
   /** Their HRMS admin role, when they also have an active admin account. */
   adminRole: UserRole | null
   /** Set when an administrator is using the portal as this staff member (switched access). */
@@ -128,6 +130,7 @@ export async function getPortalUser(staffNo: number): Promise<PortalUser | null>
     [staffNo, staffNo, staffNo],
   )
   const [[approver]] = await pool.query<Array<RowDataPacket>>('SELECT COUNT(*) AS n FROM leave_approver WHERE approver = ?', [staffNo])
+  const [procures] = await pool.query<Array<RowDataPacket>>("SELECT id AS unit_id, long_name AS unit_name FROM unit WHERE active = '1' AND apply_procure = ? ORDER BY long_name", [String(staffNo)])
   const [[admin]] = await pool.query<Array<RowDataPacket>>('SELECT role FROM hrms_users WHERE staff_no = ? AND is_active = 1 LIMIT 1', [staffNo])
   const headList: Array<HeadOf> = heads.map((h) => ({
     unitId: h.unit_id,
@@ -153,6 +156,7 @@ export async function getPortalUser(staffNo: number): Promise<PortalUser | null>
     heads: headList,
     headTitle: headTitle(headList),
     isManager: headList.length > 0 || Number(approver?.n ?? 0) > 0,
+    procures: procures.map((u) => ({ unitId: u.unit_id, unitName: properName(u.unit_name) ?? u.unit_name })),
     adminRole: (admin?.role as UserRole) ?? null,
     switchedBy: null,
   }

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import type { z } from 'zod'
-import { HeartHandshake, LifeBuoy, Plus, Wallet, Wifi, Wrench, X } from 'lucide-react'
+import { HeartHandshake, LifeBuoy, Plus, Wifi, Wrench, X } from 'lucide-react'
 import { api } from '#/lib/api-client'
 import { dateTime } from '#/lib/format'
 import { serviceRequestSchema } from '#/lib/schemas'
@@ -21,12 +21,12 @@ import { EmptyState, PageHeader } from '#/components/admin/page'
 import { CardSkeleton } from '#/components/admin/skeletons'
 import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES } from '#/components/portal/labels'
 
-type Category = 'IT' | 'EDUROAM' | 'XPAY' | 'COUNSELLING'
+type Category = 'IT' | 'EDUROAM' | 'COUNSELLING'
 
 const SERVICES: Record<string, { category: Category; title: string; description: string; icon: typeof Wrench; placeholder: string; note?: string }> = {
   it: {
     category: 'IT',
-    title: 'IT helpdesk',
+    title: 'Helpdesk & Support',
     description: 'Computer, printer, email, network and software problems. The ICT support team picks up your request.',
     icon: Wrench,
     placeholder: 'My office computer cannot connect to the shared printer…',
@@ -37,13 +37,6 @@ const SERVICES: Record<string, { category: Category; title: string; description:
     description: 'Eduroam accounts, password resets and campus Wi-Fi access.',
     icon: Wifi,
     placeholder: 'Please reset my Eduroam password…',
-  },
-  xpay: {
-    category: 'XPAY',
-    title: 'XPay support',
-    description: 'XPay account access, PIN resets and payment issues.',
-    icon: Wallet,
-    placeholder: 'I cannot sign in to XPay…',
   },
   counselling: {
     category: 'COUNSELLING',

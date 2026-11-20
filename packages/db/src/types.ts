@@ -93,7 +93,7 @@ export const STUDY_STAGES: Record<number, string> = {
   0: 'Draft',
   1: 'Awaiting head of unit',
   2: 'Awaiting dean / director',
-  3: 'Awaiting provost',
+  3: 'Awaiting provost / registrar',
   4: 'Awaiting HR',
   5: 'Approved by HR',
   6: 'Declined by HR',

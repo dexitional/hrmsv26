@@ -34,7 +34,7 @@ export const ACTIONABLE_STAGES = [0, 1, 3, 13, 14]
 export const RETURNED_STAGES = [8, 9, 10, 11]
 export const LEVEL_NAMES: Record<number, string> = { 1: 'Head of department', 2: 'Dean / Director', 3: 'Provost / Registrar' }
 
-interface UnitNode {
+export interface UnitNode {
   id: number
   parentId: number | null
   facultyId: number | null
@@ -43,7 +43,7 @@ interface UnitNode {
   unitSubhead: number | null
 }
 
-async function unitMap() {
+export async function unitMap() {
   const list = await rows<UnitNode>('SELECT id, parent_id, faculty_id, college_id, unit_head, unit_subhead FROM unit')
   return new Map(list.map((u) => [u.id, u]))
 }

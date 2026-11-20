@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileText, KeyRound, Lock, LockKeyhole, LockKeyholeOpen } from 'lucide-react'
+import { FileText, KeyRound, Lock, LockKeyhole, LockKeyholeOpen, Wallet } from 'lucide-react'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { cn } from '@hrms/ui'
@@ -13,6 +13,7 @@ import { PageHeader } from '#/components/admin/page'
 import { useSave } from '#/components/admin/mutations'
 import { PayslipDialog } from '#/components/payslip/payslip-dialog'
 import { PinDialog } from '#/components/payslip/pin-dialog'
+import { XpayPasswordDialog } from '#/components/payslip/xpay-dialog'
 import type { PinMode } from '#/components/payslip/pin-dialog'
 
 export const Route = createFileRoute('/portal/payslips')({
@@ -39,6 +40,7 @@ function MyPayslips() {
   const [viewing, setViewing] = useState<{ id: number; month: number } | null>(null)
   const [pinMode, setPinMode] = useState<PinMode | null>(null)
   const [until, setUntil] = useState<number | null>(null)
+  const [xpay, setXpay] = useState(false)
 
   // The unlock lasts 15 minutes in this browser; the page relocks with it.
   useEffect(() => setUntil(data?.unlockedUntil ? Date.parse(data.unlockedUntil) : null), [data?.unlockedUntil])
@@ -78,6 +80,7 @@ function MyPayslips() {
 
   return (
     <>
+      <XpayPasswordDialog open={xpay} onClose={() => setXpay(false)} />
       <PinDialog mode={pinMode} lockedUntil={data?.pin.lockedUntil} onClose={() => (setPinMode(null), setOpening(null))} onDone={onPinDone} />
       {viewing && (
         <PayslipDialog
@@ -96,6 +99,9 @@ function MyPayslips() {
         actions={
           data && (
             <>
+              <Button variant="outline" onClick={() => setXpay(true)}>
+                <Wallet /> Reset XPay password
+              </Button>
               {pinOn && unlocked && (
                 <Button variant="outline" onClick={() => lock.mutate(undefined)}>
                   <Lock /> Lock payslips

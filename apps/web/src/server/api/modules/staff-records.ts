@@ -5,6 +5,7 @@
 //   POST     /api/staff-records/banks/:id/default         make it the salary account
 //   GET/POST /api/staff-records/:staffNo/qualifications   PUT/DELETE /api/staff-records/qualifications/:id
 import { Hono } from 'hono'
+import { relativeCodes } from '@hrms/db'
 import { bankSchema, qualificationSchema, relativeSchema } from '#/lib/schemas'
 import { requirePermission } from '../lib/auth'
 import { audit } from '../lib/audit'
@@ -21,16 +22,11 @@ const staffParam = (v: string | undefined) => Number(v)
 /**
  * Relative codes are the staff number and a letter (14023A, 14023B, … 14023Z,
  * 14023AA…), handed out in a fixed order: spouses first, then children, then
- * parents, then every other relative; within each group, in the order they
- * were recorded. A code is the relative's place in that order, so the whole
+ * parents, then every other relative (relativeCodes in @hrms/db). The whole
  * family is renumbered whenever a relative is added, removed or changes
- * relation (most additions just take the next letter; a spouse recorded after
- * the children moves the children down one letter). Returns the relatives
- * whose code changed (the new one included).
+ * relation; codes that move are kept in hrms_relative_code_history. Returns
+ * the relatives whose code changed (the new one included).
  */
-const RELATIVE_GROUP: Record<string, number> = { SPOUSE: 0, CHILD: 1, FATHER: 2, MOTHER: 2 }
-const letters = (n: number): string => (n <= 0 ? '' : letters(Math.floor((n - 1) / 26)) + String.fromCharCode(65 + ((n - 1) % 26)))
-
 async function renumberRelatives(staffNo: number) {
   return withTransaction(async (conn) => {
     const family = await rows<{ id: number; relation: string | null; code: string | null; fname: string; lname: string }>(
@@ -38,13 +34,12 @@ async function renumberRelatives(staffNo: number) {
       [staffNo],
       conn,
     )
-    const ordered = [...family].sort((a, b) => (RELATIVE_GROUP[a.relation ?? ''] ?? 3) - (RELATIVE_GROUP[b.relation ?? ''] ?? 3) || a.id - b.id)
     const changed: Array<{ id: number; name: string; from: string | null; to: string }> = []
-    for (const [i, r] of ordered.entries()) {
-      const code = `${staffNo}${letters(i + 1)}`
-      if (r.code === code) continue
-      await exec('UPDATE staff_rel SET code = ? WHERE id = ?', [code, r.id], conn)
-      changed.push({ id: r.id, name: `${r.fname} ${r.lname}`, from: r.code || null, to: code })
+    for (const r of relativeCodes(staffNo, family)) {
+      if (r.code === r.newCode) continue
+      await exec('UPDATE staff_rel SET code = ? WHERE id = ?', [r.newCode, r.id], conn)
+      if (r.code) await exec("INSERT INTO hrms_relative_code_history (relative_id, staff_no, old_code, new_code, source) VALUES (?, ?, ?, ?, 'app')", [r.id, staffNo, r.code, r.newCode], conn)
+      changed.push({ id: r.id, name: `${r.fname} ${r.lname}`, from: r.code || null, to: r.newCode })
     }
     return changed
   })

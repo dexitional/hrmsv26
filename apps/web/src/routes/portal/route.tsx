@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Link, Outlet, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeftRight, Banknote, Bell, BookOpenCheck, CalendarDays, ChevronsUpDown, ClipboardCheck, Clock, FileStack, Gavel, GraduationCap, HeartHandshake, LayoutDashboard, LayoutGrid, LogOut, Megaphone, Receipt, ShoppingCart, Target, TrendingUp, UserRound, Users, Wallet, Wifi, Wrench } from 'lucide-react'
+import { ArrowLeftRight, Banknote, Bell, BookOpenCheck, CalendarDays, ChevronsUpDown, ClipboardCheck, FileStack, Gavel, GraduationCap, HeartHandshake, LayoutDashboard, LayoutGrid, LogOut, Megaphone, Receipt, ShoppingCart, Target, TrendingUp, UserRound, Users, Wifi, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@hrms/ui'
 import { getPortalSession } from '#/server/portal-session'
@@ -85,7 +85,6 @@ function PortalLayout() {
         { to: '/portal/promotion', label: 'Promotion', icon: TrendingUp },
         { to: '/portal/study', label: 'Study leave', icon: BookOpenCheck },
         { to: '/portal/disciplinary', label: 'Disciplinary', icon: Gavel },
-        { to: '/portal/attendance', label: 'Attendance', icon: Clock },
         { to: '/portal/payslips', label: 'Payslips', icon: Banknote },
         { to: '/portal/tax', label: 'GRA ETD', icon: Receipt },
       ],
@@ -95,8 +94,7 @@ function PortalLayout() {
       items: [
         { to: '/portal/support/counselling', label: 'Counselling', icon: HeartHandshake },
         { to: '/portal/support/eduroam', label: 'Eduroam & Wi-Fi', icon: Wifi },
-        { to: '/portal/support/it', label: 'IT helpdesk', icon: Wrench },
-        { to: '/portal/support/xpay', label: 'XPay support', icon: Wallet },
+        { to: '/portal/support/it', label: 'Helpdesk & Support', icon: Wrench },
       ],
     },
     ...(staff.isManager
@@ -115,7 +113,9 @@ function PortalLayout() {
             ],
           },
         ]
-      : []),
+      : staff.procures.length
+        ? [{ heading: 'Management services', items: [{ to: '/portal/manage/procurement', label: 'Procurement manager', icon: ShoppingCart }] }]
+        : []),
   ]
 
   return (

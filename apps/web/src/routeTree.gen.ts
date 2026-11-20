@@ -31,7 +31,6 @@ import { Route as AdminUnitsRouteImport } from './routes/admin/units'
 import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
-import { Route as PortalAttendanceRouteImport } from './routes/portal/attendance'
 import { Route as PortalDisciplinaryRouteImport } from './routes/portal/disciplinary'
 import { Route as PortalLeaveRouteImport } from './routes/portal/leave'
 import { Route as PortalNotificationsRouteImport } from './routes/portal/notifications'
@@ -60,7 +59,6 @@ import { Route as PortalManageLeaveRouteImport } from './routes/portal/manage/le
 import { Route as PortalManagePlansRouteImport } from './routes/portal/manage/plans'
 import { Route as PortalManageProcurementRouteImport } from './routes/portal/manage/procurement'
 import { Route as PortalManageStaffRouteImport } from './routes/portal/manage/staff'
-import { Route as PortalManageStudyRouteImport } from './routes/portal/manage/study'
 import { Route as PortalPromotionIndexRouteImport } from './routes/portal/promotion/index'
 import { Route as PortalPromotionIdRouteImport } from './routes/portal/promotion/$id'
 import { Route as PortalPromotionApplyRouteImport } from './routes/portal/promotion/apply'
@@ -90,6 +88,8 @@ import { Route as PortalAppraisalSelfIdRouteImport } from './routes/portal/appra
 import { Route as PortalManageAppraisalsIndexRouteImport } from './routes/portal/manage/appraisals/index'
 import { Route as PortalManagePromotionsIndexRouteImport } from './routes/portal/manage/promotions/index'
 import { Route as PortalManagePromotionsIdRouteImport } from './routes/portal/manage/promotions/$id'
+import { Route as PortalManageStudyIndexRouteImport } from './routes/portal/manage/study/index'
+import { Route as PortalManageStudyIdRouteImport } from './routes/portal/manage/study/$id'
 import { Route as PortalManageAppraisalsStaffNoYearRouteImport } from './routes/portal/manage/appraisals/$staffNo.$year'
 
 const IndexRoute = IndexRouteImport.update({
@@ -200,11 +200,6 @@ const ApiSplatRoute = ApiSplatRouteImport.update({
 const PortalIndexRoute = PortalIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalAttendanceRoute = PortalAttendanceRouteImport.update({
-  id: '/attendance',
-  path: '/attendance',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalDisciplinaryRoute = PortalDisciplinaryRouteImport.update({
@@ -345,11 +340,6 @@ const PortalManageProcurementRoute = PortalManageProcurementRouteImport.update({
 const PortalManageStaffRoute = PortalManageStaffRouteImport.update({
   id: '/manage/staff',
   path: '/manage/staff',
-  getParentRoute: () => PortalRouteRoute,
-} as any)
-const PortalManageStudyRoute = PortalManageStudyRouteImport.update({
-  id: '/manage/study',
-  path: '/manage/study',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalPromotionIndexRoute = PortalPromotionIndexRouteImport.update({
@@ -501,6 +491,16 @@ const PortalManagePromotionsIdRoute =
     path: '/manage/promotions/$id',
     getParentRoute: () => PortalRouteRoute,
   } as any)
+const PortalManageStudyIndexRoute = PortalManageStudyIndexRouteImport.update({
+  id: '/manage/study/',
+  path: '/manage/study/',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalManageStudyIdRoute = PortalManageStudyIdRouteImport.update({
+  id: '/manage/study/$id',
+  path: '/manage/study/$id',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PortalManageAppraisalsStaffNoYearRoute =
   PortalManageAppraisalsStaffNoYearRouteImport.update({
     id: '/manage/appraisals/$staffNo/$year',
@@ -529,7 +529,6 @@ export interface FileRoutesByFullPath {
   '/admin/units': typeof AdminUnitsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/$': typeof ApiSplatRoute
-  '/portal/attendance': typeof PortalAttendanceRoute
   '/portal/disciplinary': typeof PortalDisciplinaryRoute
   '/portal/leave': typeof PortalLeaveRoute
   '/portal/notifications': typeof PortalNotificationsRoute
@@ -553,7 +552,6 @@ export interface FileRoutesByFullPath {
   '/portal/manage/plans': typeof PortalManagePlansRoute
   '/portal/manage/procurement': typeof PortalManageProcurementRoute
   '/portal/manage/staff': typeof PortalManageStaffRoute
-  '/portal/manage/study': typeof PortalManageStudyRoute
   '/portal/promotion/$id': typeof PortalPromotionIdRoute
   '/portal/promotion/apply': typeof PortalPromotionApplyRoute
   '/portal/support/$category': typeof PortalSupportCategoryRoute
@@ -585,11 +583,13 @@ export interface FileRoutesByFullPath {
   '/portal/appraisal/a/$year': typeof PortalAppraisalAYearRoute
   '/portal/appraisal/self/$id': typeof PortalAppraisalSelfIdRoute
   '/portal/manage/promotions/$id': typeof PortalManagePromotionsIdRoute
+  '/portal/manage/study/$id': typeof PortalManageStudyIdRoute
   '/admin/circulars/$id/': typeof AdminCircularsIdIndexRoute
   '/admin/nss/$id/': typeof AdminNssIdIndexRoute
   '/admin/staff/$staffNo/': typeof AdminStaffStaffNoIndexRoute
   '/portal/manage/appraisals/': typeof PortalManageAppraisalsIndexRoute
   '/portal/manage/promotions/': typeof PortalManagePromotionsIndexRoute
+  '/portal/manage/study/': typeof PortalManageStudyIndexRoute
   '/portal/manage/appraisals/$staffNo/$year': typeof PortalManageAppraisalsStaffNoYearRoute
 }
 export interface FileRoutesByTo {
@@ -611,7 +611,6 @@ export interface FileRoutesByTo {
   '/admin/units': typeof AdminUnitsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/$': typeof ApiSplatRoute
-  '/portal/attendance': typeof PortalAttendanceRoute
   '/portal/disciplinary': typeof PortalDisciplinaryRoute
   '/portal/leave': typeof PortalLeaveRoute
   '/portal/notifications': typeof PortalNotificationsRoute
@@ -635,7 +634,6 @@ export interface FileRoutesByTo {
   '/portal/manage/plans': typeof PortalManagePlansRoute
   '/portal/manage/procurement': typeof PortalManageProcurementRoute
   '/portal/manage/staff': typeof PortalManageStaffRoute
-  '/portal/manage/study': typeof PortalManageStudyRoute
   '/portal/promotion/$id': typeof PortalPromotionIdRoute
   '/portal/promotion/apply': typeof PortalPromotionApplyRoute
   '/portal/support/$category': typeof PortalSupportCategoryRoute
@@ -667,11 +665,13 @@ export interface FileRoutesByTo {
   '/portal/appraisal/a/$year': typeof PortalAppraisalAYearRoute
   '/portal/appraisal/self/$id': typeof PortalAppraisalSelfIdRoute
   '/portal/manage/promotions/$id': typeof PortalManagePromotionsIdRoute
+  '/portal/manage/study/$id': typeof PortalManageStudyIdRoute
   '/admin/circulars/$id': typeof AdminCircularsIdIndexRoute
   '/admin/nss/$id': typeof AdminNssIdIndexRoute
   '/admin/staff/$staffNo': typeof AdminStaffStaffNoIndexRoute
   '/portal/manage/appraisals': typeof PortalManageAppraisalsIndexRoute
   '/portal/manage/promotions': typeof PortalManagePromotionsIndexRoute
+  '/portal/manage/study': typeof PortalManageStudyIndexRoute
   '/portal/manage/appraisals/$staffNo/$year': typeof PortalManageAppraisalsStaffNoYearRoute
 }
 export interface FileRoutesById {
@@ -696,7 +696,6 @@ export interface FileRoutesById {
   '/admin/units': typeof AdminUnitsRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/$': typeof ApiSplatRoute
-  '/portal/attendance': typeof PortalAttendanceRoute
   '/portal/disciplinary': typeof PortalDisciplinaryRoute
   '/portal/leave': typeof PortalLeaveRoute
   '/portal/notifications': typeof PortalNotificationsRoute
@@ -720,7 +719,6 @@ export interface FileRoutesById {
   '/portal/manage/plans': typeof PortalManagePlansRoute
   '/portal/manage/procurement': typeof PortalManageProcurementRoute
   '/portal/manage/staff': typeof PortalManageStaffRoute
-  '/portal/manage/study': typeof PortalManageStudyRoute
   '/portal/promotion/$id': typeof PortalPromotionIdRoute
   '/portal/promotion/apply': typeof PortalPromotionApplyRoute
   '/portal/support/$category': typeof PortalSupportCategoryRoute
@@ -752,11 +750,13 @@ export interface FileRoutesById {
   '/portal/appraisal/a/$year': typeof PortalAppraisalAYearRoute
   '/portal/appraisal/self/$id': typeof PortalAppraisalSelfIdRoute
   '/portal/manage/promotions/$id': typeof PortalManagePromotionsIdRoute
+  '/portal/manage/study/$id': typeof PortalManageStudyIdRoute
   '/admin/circulars/$id/': typeof AdminCircularsIdIndexRoute
   '/admin/nss/$id/': typeof AdminNssIdIndexRoute
   '/admin/staff/$staffNo/': typeof AdminStaffStaffNoIndexRoute
   '/portal/manage/appraisals/': typeof PortalManageAppraisalsIndexRoute
   '/portal/manage/promotions/': typeof PortalManagePromotionsIndexRoute
+  '/portal/manage/study/': typeof PortalManageStudyIndexRoute
   '/portal/manage/appraisals/$staffNo/$year': typeof PortalManageAppraisalsStaffNoYearRoute
 }
 export interface FileRouteTypes {
@@ -782,7 +782,6 @@ export interface FileRouteTypes {
     | '/admin/units'
     | '/admin/users'
     | '/api/$'
-    | '/portal/attendance'
     | '/portal/disciplinary'
     | '/portal/leave'
     | '/portal/notifications'
@@ -806,7 +805,6 @@ export interface FileRouteTypes {
     | '/portal/manage/plans'
     | '/portal/manage/procurement'
     | '/portal/manage/staff'
-    | '/portal/manage/study'
     | '/portal/promotion/$id'
     | '/portal/promotion/apply'
     | '/portal/support/$category'
@@ -838,11 +836,13 @@ export interface FileRouteTypes {
     | '/portal/appraisal/a/$year'
     | '/portal/appraisal/self/$id'
     | '/portal/manage/promotions/$id'
+    | '/portal/manage/study/$id'
     | '/admin/circulars/$id/'
     | '/admin/nss/$id/'
     | '/admin/staff/$staffNo/'
     | '/portal/manage/appraisals/'
     | '/portal/manage/promotions/'
+    | '/portal/manage/study/'
     | '/portal/manage/appraisals/$staffNo/$year'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -864,7 +864,6 @@ export interface FileRouteTypes {
     | '/admin/units'
     | '/admin/users'
     | '/api/$'
-    | '/portal/attendance'
     | '/portal/disciplinary'
     | '/portal/leave'
     | '/portal/notifications'
@@ -888,7 +887,6 @@ export interface FileRouteTypes {
     | '/portal/manage/plans'
     | '/portal/manage/procurement'
     | '/portal/manage/staff'
-    | '/portal/manage/study'
     | '/portal/promotion/$id'
     | '/portal/promotion/apply'
     | '/portal/support/$category'
@@ -920,11 +918,13 @@ export interface FileRouteTypes {
     | '/portal/appraisal/a/$year'
     | '/portal/appraisal/self/$id'
     | '/portal/manage/promotions/$id'
+    | '/portal/manage/study/$id'
     | '/admin/circulars/$id'
     | '/admin/nss/$id'
     | '/admin/staff/$staffNo'
     | '/portal/manage/appraisals'
     | '/portal/manage/promotions'
+    | '/portal/manage/study'
     | '/portal/manage/appraisals/$staffNo/$year'
   id:
     | '__root__'
@@ -948,7 +948,6 @@ export interface FileRouteTypes {
     | '/admin/units'
     | '/admin/users'
     | '/api/$'
-    | '/portal/attendance'
     | '/portal/disciplinary'
     | '/portal/leave'
     | '/portal/notifications'
@@ -972,7 +971,6 @@ export interface FileRouteTypes {
     | '/portal/manage/plans'
     | '/portal/manage/procurement'
     | '/portal/manage/staff'
-    | '/portal/manage/study'
     | '/portal/promotion/$id'
     | '/portal/promotion/apply'
     | '/portal/support/$category'
@@ -1004,11 +1002,13 @@ export interface FileRouteTypes {
     | '/portal/appraisal/a/$year'
     | '/portal/appraisal/self/$id'
     | '/portal/manage/promotions/$id'
+    | '/portal/manage/study/$id'
     | '/admin/circulars/$id/'
     | '/admin/nss/$id/'
     | '/admin/staff/$staffNo/'
     | '/portal/manage/appraisals/'
     | '/portal/manage/promotions/'
+    | '/portal/manage/study/'
     | '/portal/manage/appraisals/$staffNo/$year'
   fileRoutesById: FileRoutesById
 }
@@ -1190,13 +1190,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/portal/'
       preLoaderRoute: typeof PortalIndexRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/attendance': {
-      id: '/portal/attendance'
-      path: '/attendance'
-      fullPath: '/portal/attendance'
-      preLoaderRoute: typeof PortalAttendanceRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/disciplinary': {
@@ -1393,13 +1386,6 @@ declare module '@tanstack/react-router' {
       path: '/manage/staff'
       fullPath: '/portal/manage/staff'
       preLoaderRoute: typeof PortalManageStaffRouteImport
-      parentRoute: typeof PortalRouteRoute
-    }
-    '/portal/manage/study': {
-      id: '/portal/manage/study'
-      path: '/manage/study'
-      fullPath: '/portal/manage/study'
-      preLoaderRoute: typeof PortalManageStudyRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/promotion/': {
@@ -1605,6 +1591,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalManagePromotionsIdRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    '/portal/manage/study/': {
+      id: '/portal/manage/study/'
+      path: '/manage/study'
+      fullPath: '/portal/manage/study/'
+      preLoaderRoute: typeof PortalManageStudyIndexRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/manage/study/$id': {
+      id: '/portal/manage/study/$id'
+      path: '/manage/study/$id'
+      fullPath: '/portal/manage/study/$id'
+      preLoaderRoute: typeof PortalManageStudyIdRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/portal/manage/appraisals/$staffNo/$year': {
       id: '/portal/manage/appraisals/$staffNo/$year'
       path: '/manage/appraisals/$staffNo/$year'
@@ -1701,7 +1701,6 @@ const PortalAppraisalSelfRouteWithChildren =
   PortalAppraisalSelfRoute._addFileChildren(PortalAppraisalSelfRouteChildren)
 
 interface PortalRouteRouteChildren {
-  PortalAttendanceRoute: typeof PortalAttendanceRoute
   PortalDisciplinaryRoute: typeof PortalDisciplinaryRoute
   PortalLeaveRoute: typeof PortalLeaveRoute
   PortalNotificationsRoute: typeof PortalNotificationsRoute
@@ -1717,7 +1716,6 @@ interface PortalRouteRouteChildren {
   PortalManagePlansRoute: typeof PortalManagePlansRoute
   PortalManageProcurementRoute: typeof PortalManageProcurementRoute
   PortalManageStaffRoute: typeof PortalManageStaffRoute
-  PortalManageStudyRoute: typeof PortalManageStudyRoute
   PortalPromotionIdRoute: typeof PortalPromotionIdRoute
   PortalPromotionApplyRoute: typeof PortalPromotionApplyRoute
   PortalSupportCategoryRoute: typeof PortalSupportCategoryRoute
@@ -1726,13 +1724,14 @@ interface PortalRouteRouteChildren {
   PortalPromotionIndexRoute: typeof PortalPromotionIndexRoute
   PortalAppraisalAYearRoute: typeof PortalAppraisalAYearRoute
   PortalManagePromotionsIdRoute: typeof PortalManagePromotionsIdRoute
+  PortalManageStudyIdRoute: typeof PortalManageStudyIdRoute
   PortalManageAppraisalsIndexRoute: typeof PortalManageAppraisalsIndexRoute
   PortalManagePromotionsIndexRoute: typeof PortalManagePromotionsIndexRoute
+  PortalManageStudyIndexRoute: typeof PortalManageStudyIndexRoute
   PortalManageAppraisalsStaffNoYearRoute: typeof PortalManageAppraisalsStaffNoYearRoute
 }
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
-  PortalAttendanceRoute: PortalAttendanceRoute,
   PortalDisciplinaryRoute: PortalDisciplinaryRoute,
   PortalLeaveRoute: PortalLeaveRoute,
   PortalNotificationsRoute: PortalNotificationsRoute,
@@ -1748,7 +1747,6 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalManagePlansRoute: PortalManagePlansRoute,
   PortalManageProcurementRoute: PortalManageProcurementRoute,
   PortalManageStaffRoute: PortalManageStaffRoute,
-  PortalManageStudyRoute: PortalManageStudyRoute,
   PortalPromotionIdRoute: PortalPromotionIdRoute,
   PortalPromotionApplyRoute: PortalPromotionApplyRoute,
   PortalSupportCategoryRoute: PortalSupportCategoryRoute,
@@ -1757,8 +1755,10 @@ const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalPromotionIndexRoute: PortalPromotionIndexRoute,
   PortalAppraisalAYearRoute: PortalAppraisalAYearRoute,
   PortalManagePromotionsIdRoute: PortalManagePromotionsIdRoute,
+  PortalManageStudyIdRoute: PortalManageStudyIdRoute,
   PortalManageAppraisalsIndexRoute: PortalManageAppraisalsIndexRoute,
   PortalManagePromotionsIndexRoute: PortalManagePromotionsIndexRoute,
+  PortalManageStudyIndexRoute: PortalManageStudyIndexRoute,
   PortalManageAppraisalsStaffNoYearRoute:
     PortalManageAppraisalsStaffNoYearRoute,
 }

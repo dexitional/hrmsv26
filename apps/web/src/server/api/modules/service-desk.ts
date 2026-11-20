@@ -1,5 +1,5 @@
 // Support requests staff raise from the portal (legacy staff_request):
-// IT helpdesk, Eduroam & Wi-Fi, XPay, counselling and HR enquiries.
+// Helpdesk & Support, Eduroam & Wi-Fi, counselling and HR enquiries.
 //   GET  /api/service-desk?category=&status=&q=&page=
 //   POST /api/service-desk/:id/respond   { status: IN_PROGRESS | RESOLVED, response }
 import { Hono } from 'hono'

@@ -11,14 +11,14 @@
 //   POST /api/portal/manage/promotions/:id/action   { recommend | not_recommend (signed endorsement PDF required) | return | reverse | reverse_applicant }
 //   GET  /api/portal/manage/advisers?year=   POST /api/portal/manage/advisers   DELETE /api/portal/manage/advisers/:id
 //   GET  /api/portal/manage/plans?year=   GET/PUT /api/portal/manage/plans/:id   POST /api/portal/manage/plans
-//   GET  /api/portal/manage/procurement   GET/PUT/DELETE /api/portal/manage/procurement/:id   POST /api/portal/manage/procurement
-//   GET  /api/portal/manage/study   (read-only for now)   GET /api/portal/manage/study/:id (printable)
+//   /api/portal/manage/procurement…  see portal-procurement.ts (heads and the staff they assign)
+//   GET  /api/portal/manage/study   GET /api/portal/manage/study/:id   POST /api/portal/manage/study/:id/decision   { approve | decline, comments }
 //   GET  /api/portal/manage/appraisals?year=     GET /api/portal/manage/appraisals/:staffNo/:year
 //   POST /api/portal/manage/appraisals/:staffNo/:year/form-a   POST /api/portal/manage/appraisals/self/:id/countersign
 import { Hono } from 'hono'
 import type { z } from 'zod'
 import { STUDY_STAGES } from '@hrms/db'
-import { adviserNominationSchema, operationalPlanSchema, procurementRequestSchema, countersignSchema, formASchema, leaveDecisionSchema, portalPromotionActionSchema } from '#/lib/schemas'
+import { PLAN_RICH_FIELDS, adviserNominationSchema, operationalPlanSchema, studyDecisionSchema, countersignSchema, formASchema, leaveDecisionSchema, portalPromotionActionSchema } from '#/lib/schemas'
 import type { PortalUser } from '#/server/portal-session-core'
 import { SUPERVISOR_SIGNED, appraisalQuestions, formASummaries, loadFormA, loadFormB, notifyStaff, saveFormA } from '../lib/appraisal'
 import { audit } from '../lib/audit'
@@ -28,6 +28,8 @@ import { AppError, notFound } from '../lib/errors'
 import { BRIEF_COLUMNS, PLACEMENT, activeStaffSql, leaveYear, nameSql, requireStaff } from '../lib/hr'
 import { inList, leaveApprovees, requireManager, teamStaff, teamUnits } from '../lib/portal'
 import { validate } from '../lib/validate'
+import { cleanHtml } from '../lib/rich-text'
+import { decideStudy, isOpen, levelName, notifyStudyApplicant, notifyStudyLevel, studyActing, studyFile } from '../lib/study-approval'
 import { loadIntention } from './study'
 import { XLSX_TYPE, buildXlsx } from '../lib/xlsx'
 import { GROUP_LABELS } from '#/lib/labels'
@@ -103,6 +105,37 @@ function planYear(d = new Date()) {
 }
 
 type Plan = z.output<typeof operationalPlanSchema>
+
+/** The plan form with its rich-text fields cleaned to safe HTML. */
+function cleanPlan(d: Plan): Plan {
+  const out = { ...d, ...Object.fromEntries(PLAN_RICH_FIELDS.map((k) => [k, cleanHtml(d[k] as string | null | undefined) ?? d[k] ?? null])) } as Plan
+  const required: Array<[keyof Plan, string]> = [
+    ['projectSummary', 'Describe the objective'],
+    ['performanceIndicators', 'Give the performance indicators'],
+    ['outputSummary', 'Describe the output'],
+    ['outputIndicators', 'Give the output indicators'],
+    ['outcomeSummary', 'Describe the outcome'],
+    ['outcomeIndicators', 'Give the outcome indicators'],
+    ['impactSummary', 'Describe the impact'],
+    ['impactIndicators', 'Give the impact indicators'],
+  ]
+  for (const [k, msg] of required) if (!plainText(out[k] as string | null)) throw new AppError(`${String(k)}: ${msg}`, 422)
+  return out
+}
+
+/** Rich text as one line of plain text (list previews). */
+const plainText = (html: string | null | undefined) =>
+  String(html ?? '')
+    .replace(/<(br|\/p|\/li|\/div|\/tr)[^>]*>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
 type Conn = Parameters<typeof exec>[2]
 
 function objectiveColumns(d: Plan) {
@@ -176,58 +209,6 @@ async function loadPlan(id: number) {
     remarks: review?.remarks ?? null,
     rStatus: review?.rStatus || null,
   } as Record<string, any>
-}
-
-/** Item categories of the procurement system. */
-async function procurementCategories() {
-  return rows<{ value: number; label: string }>('SELECT id AS value, TRIM(cat_name) AS label FROM procurement.item_cat ORDER BY cat_name')
-}
-
-/**
- * Writes a procurement request as the old portal did: the header (with a
- * random order number), one breakdown row per item, and request_log entries.
- * Submitting sends it to the Procurement Directorate (stage 4, status 1).
- */
-async function saveProcurement(staffNo: number, existingId: number | null, d: z.output<typeof procurementRequestSchema>) {
-  const items = d.items.map((i) => ({ ...i, total: Math.round(i.quantity * i.unitPrice * 100) / 100 }))
-  const total = Math.round(items.reduce((t, i) => t + i.total, 0) * 100) / 100
-  const status = d.submit ? 1 : 0
-  const stage = d.submit ? 4 : 1
-  return withTransaction(async (conn) => {
-    let id = existingId
-    let orderNo: string
-    if (id) {
-      orderNo = String((await one<{ orderNo: string }>('SELECT order_no FROM procurement.request WHERE request_id = ?', [id], conn))?.orderNo ?? '')
-      await exec(
-        `UPDATE procurement.request SET status = ?, stage = ?, stage_status = 1, total_price = ?, request_date = ${d.submit ? 'CURRENT_TIMESTAMP' : 'request_date'} WHERE request_id = ? AND status = 0`,
-        [status, String(stage), total, id],
-        conn,
-      )
-      await exec('DELETE FROM procurement.request_breakdown WHERE request_id = ?', [id], conn)
-    } else {
-      orderNo = `${100000 + Math.floor(Math.random() * 899_910)}${Math.floor(Date.now() / 1000)}`
-      const [res] = await conn!.query<import('mysql2').ResultSetHeader>(
-        'INSERT INTO procurement.request (unit_id, staff_no, order_no, status, stage, stage_status, total_price) VALUES (?, ?, ?, ?, ?, 1, ?)',
-        [d.unitId, staffNo, orderNo, status, String(stage), total],
-      )
-      id = res.insertId
-    }
-    for (const i of items) {
-      await exec(
-        `INSERT INTO procurement.request_breakdown (unit_id, staff_no, request_id, order_no, item_desc, quantity, unit_price, total_price, product_cat, status, stage, stage_status${d.submit ? ', sub_date' : ''})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1${d.submit ? ', CURRENT_TIMESTAMP' : ''})`,
-        [d.unitId, staffNo, id, orderNo, i.description, String(i.quantity), i.unitPrice, i.total, i.categoryId, status, stage],
-        conn,
-      )
-    }
-    await exec(
-      `INSERT INTO procurement.request_log (unit_id, request_id, staff_no, order_no, status, stage, stage_status, type, comments, item_description, total_price)
-       VALUES (?, ?, ?, ?, ?, ?, 1, 1, ?, ?, ?)`,
-      [d.unitId, id, staffNo, orderNo, status, stage, d.submit ? 'Submitted to the Procurement Directorate (staff portal)' : 'Saved draft (staff portal)', 'Applied For Procurement of Item(s)', total],
-      conn,
-    )
-    return id!
-  })
 }
 
 export const portalManageRoute = new Hono()
@@ -471,23 +452,66 @@ export const portalManageRoute = new Hono()
     audit(null, 'update', 'promotion', id, `Staff portal: ${me.fullName} (${me.staffNo}) as ${levelName}: ${r.label} — application #${id} of staff ${r.staffNo}`)
     return c.json({ ok: true, ...r })
   })
+  // ------------------------------------------------------------ Study leave
+  // Intentions to study of the team. Each level of the old portal's chain
+  // (head of unit → dean / director → provost / registrar → HR) approves or
+  // disapproves with a comment; see lib/study-approval.ts.
   .get('/study', async (c) => {
-    const team = await teamStaff(c.get('staff'))
+    const me = c.get('staff')
+    const team = await teamStaff(me)
+    if (!team.length) return c.json([])
     const data = await rows<Record<string, any>>(
-      `SELECT i.id, i.staff_no, ${nameSql()} AS full_name, u.long_name AS unit_name, i.int_prog, i.study_place, i.date_commence, i.prog_duration,
-              i.appstatus, i.stage_status, i.sub_date
+      `SELECT i.id, i.staff_no, ${nameSql()} AS full_name, u.id AS unit_id, u.long_name AS unit_name, u.type AS unit_type, j.title AS job_title,
+              i.int_prog, i.study_place, i.date_commence, i.prog_duration, i.prog_type, i.study_mode, i.appstatus, COALESCE(i.stage_status, 0) AS stage_status,
+              i.sub_date, i.activity_date, i.remarks
          FROM study_intention i JOIN staff s ON s.staff_no = i.staff_no ${PLACEMENT}
-        WHERE ${inList('i.staff_no', team)} AND i.appstatus BETWEEN 1 AND 4
-        ORDER BY i.appstatus, i.sub_date DESC LIMIT 300`,
+        WHERE ${inList('i.staff_no', team)} AND i.appstatus >= 1
+        ORDER BY COALESCE(i.sub_date, i.activity_date) DESC, i.id DESC LIMIT 1000`,
       team,
     )
-    return c.json(data.map((i) => ({ ...i, stageLabel: STUDY_STAGES[Number(i.appstatus)] ?? '—' })))
+    const files = data.map((i) => ({ id: Number(i.id), staffNo: Number(i.staffNo), unitId: i.unitId ?? null, appstatus: Number(i.appstatus), stageStatus: Number(i.stageStatus) }))
+    const acting = await studyActing(me, files)
+    return c.json(
+      data.map((i, n) => ({
+        ...i,
+        appstatus: Number(i.appstatus),
+        stageStatus: Number(i.stageStatus),
+        waitingAt: acting[n]!.waitingAt,
+        waitingFor: isOpen(Number(i.appstatus), Number(i.stageStatus)) ? levelName(acting[n]!.waitingAt, i.unitType) : null,
+        canAct: acting[n]!.mine,
+        stageLabel: STUDY_STAGES[Number(i.appstatus)] ?? '—',
+      })),
+    )
   })
-  // One of the team's intentions to study, to read and print.
+  // One of the team's intentions to study: the form, the trail, and whether it waits for this head.
   .get('/study/:id', async (c) => {
+    const me = c.get('staff')
     const intention = await loadIntention(parseId(c.req.param('id')))
-    if (!intention || !(await teamStaff(c.get('staff'))).includes(Number(intention.staffNo))) throw notFound('Application')
-    return c.json(intention)
+    if (!intention || !(await teamStaff(me)).includes(Number(intention.staffNo))) throw notFound('Application')
+    const f = await studyFile(Number(intention.id))
+    const [acting] = f ? await studyActing(me, [f]) : []
+    const open = f ? isOpen(f.appstatus, f.stageStatus) : false
+    return c.json({
+      ...intention,
+      unitType: f?.unitType ?? null,
+      canAct: Boolean(acting?.mine),
+      waitingAt: acting?.waitingAt ?? null,
+      waitingFor: open && acting ? levelName(acting.waitingAt, f?.unitType) : null,
+      myLevel: acting?.mine ? levelName(acting.waitingAt, f?.unitType) : null,
+    })
+  })
+  .post('/study/:id/decision', validate('json', studyDecisionSchema), async (c) => {
+    const me = c.get('staff')
+    const id = parseId(c.req.param('id'))
+    const { decision, comments } = c.req.valid('json')
+    const r = await decideStudy(me, id, decision === 'approve' ? 'approve' : 'disapprove', comments)
+    const what = `intention to study${r.intProg ? ` (${String(r.intProg).slice(0, 80)})` : ''}`
+    if (decision === 'approve') {
+      notifyStudyApplicant(r.staffNo, 'Intention to study approved', `The ${r.levelName} approved your ${what} and forwarded it to the ${r.nextName}.`)
+      if (r.next <= 3) await notifyStudyLevel(id)
+    } else notifyStudyApplicant(r.staffNo, 'Intention to study not approved', `The ${r.levelName} did not approve your ${what}: ${comments}`)
+    audit(null, 'update', 'study', id, `Staff portal: ${me.fullName} (${me.staffNo}) as ${r.levelName}: ${r.label} intention to study #${id} of staff ${r.staffNo}${decision === 'approve' ? ` → ${r.nextName}` : ''}`)
+    return c.json({ ok: true, appstatus: r.next, level: r.levelName, next: r.nextName })
   })
   // ------------------------------------------------------------ Academic advisers
   // Heads nominate academic staff in their units as advisers for a programme
@@ -608,7 +632,12 @@ export const portalManageRoute = new Hono()
       year,
       years: [...new Set([planYear(), ...years.map((y) => y.year)])],
       units: me.heads.map((h) => ({ value: h.unitId, label: h.unitName })),
-      plans: plans.map((p) => ({ ...p, editable: own.includes(Number(p.unitId)) && p.reviewYear === planYear() })),
+      plans: plans.map((p) => ({
+        ...p,
+        projectSummary: plainText(p.projectSummary),
+        performanceIndicators: plainText(p.performanceIndicators),
+        editable: own.includes(Number(p.unitId)) && p.reviewYear === planYear(),
+      })),
     })
   })
   .get('/plans/:id', async (c) => {
@@ -620,7 +649,7 @@ export const portalManageRoute = new Hono()
   })
   .post('/plans', validate('json', operationalPlanSchema), async (c) => {
     const me = c.get('staff')
-    const d = c.req.valid('json')
+    const d = cleanPlan(c.req.valid('json'))
     if (!me.heads.some((h) => h.unitId === d.unitId)) throw new AppError('You can create plans only for units you head.', 403)
     const id = await withTransaction(async (conn) => {
       const oid = await insert('objectives', { staffNo: me.staffNo, reviewYear: planYear(), status: 1, ...objectiveColumns(d) }, conn)
@@ -633,7 +662,7 @@ export const portalManageRoute = new Hono()
   .put('/plans/:id', validate('json', operationalPlanSchema), async (c) => {
     const me = c.get('staff')
     const id = parseId(c.req.param('id'))
-    const d = c.req.valid('json')
+    const d = cleanPlan(c.req.valid('json'))
     const plan = await one<{ unitId: number; reviewYear: string }>('SELECT unit_id, review_year FROM objectives WHERE id = ?', [id])
     if (!plan || !me.heads.some((h) => h.unitId === Number(plan.unitId))) throw notFound('Plan')
     if (plan.reviewYear !== planYear()) throw new AppError(`Only this year’s plans (${planYear()}) can be changed.`, 409)
@@ -644,95 +673,6 @@ export const portalManageRoute = new Hono()
     })
     audit(null, 'update', 'plan', id, `Staff portal: ${me.fullName} (${me.staffNo}) updated operational plan #${id}${d.rStatus ? ` (status: ${d.rStatus})` : ''}`)
     return c.json({ id })
-  })
-
-  // ------------------------------------------------------------ Procurement
-  // The procurement database (same server): a head raises requests for the
-  // units they head (request + request_breakdown, every step in request_log).
-  // Submitted requests go to the Procurement Directorate (stage 4, status 1), as
-  // the old portal now sends them. Requests of units below them are read-only.
-
-  .get('/procurement', async (c) => {
-    const me = c.get('staff')
-    const own = me.heads.map((h) => h.unitId)
-    const below = (await teamUnits(me)).filter((u) => !own.includes(u))
-    const list = (units: Array<number>, extra = '') =>
-      units.length
-        ? rows<Record<string, any>>(
-            `SELECT r.request_id AS id, r.unit_id, u.long_name AS unit_name, r.order_no, r.status, r.stage, r.request_date, r.date_added, r.staff_no,
-                    ${nameSql()} AS full_name, COUNT(b.id) AS items, COALESCE(SUM(b.total_price), 0) AS total
-               FROM procurement.request r JOIN unit u ON u.id = r.unit_id LEFT JOIN staff s ON s.staff_no = r.staff_no
-               LEFT JOIN procurement.request_breakdown b ON b.request_id = r.request_id
-              WHERE ${inList('r.unit_id', units)}${extra}
-              GROUP BY r.request_id ORDER BY r.request_id DESC LIMIT 500`,
-            units,
-          )
-        : Promise.resolve([])
-    const [mine, theirs, categories] = await Promise.all([list(own), list(below, ' AND r.status > 0'), procurementCategories()])
-    return c.json({
-      units: me.heads.map((h) => ({ value: h.unitId, label: h.unitName })),
-      categories,
-      requests: mine.map((r) => ({ ...r, editable: Number(r.status) === 0 })),
-      below: theirs,
-    })
-  })
-  .get('/procurement/:id', async (c) => {
-    const me = c.get('staff')
-    const id = parseId(c.req.param('id'))
-    const r = await one<Record<string, any>>(
-      `SELECT r.request_id AS id, r.unit_id, u.long_name AS unit_name, r.order_no, r.status, r.stage, r.request_date, r.date_added, r.staff_no, ${nameSql()} AS full_name
-         FROM procurement.request r JOIN unit u ON u.id = r.unit_id LEFT JOIN staff s ON s.staff_no = r.staff_no WHERE r.request_id = ?`,
-      [id],
-    )
-    const own = me.heads.map((h) => h.unitId)
-    const units = [...own, ...(await teamUnits(me))]
-    if (!r || !units.includes(Number(r.unitId)) || (Number(r.status) === 0 && !own.includes(Number(r.unitId)))) throw notFound('Request')
-    const [items, log] = await Promise.all([
-      rows(
-        `SELECT b.id, b.product_cat AS category_id, c.cat_name AS category, b.item_desc AS description, b.quantity, b.unit_price, b.total_price, b.budget_state
-           FROM procurement.request_breakdown b LEFT JOIN procurement.item_cat c ON c.id = b.product_cat WHERE b.request_id = ? ORDER BY b.id`,
-        [id],
-      ),
-      rows(
-        `SELECT l.id, l.stage, l.status, l.comments, l.item_description, l.date_added, l.staff_no, ${nameSql()} AS full_name
-           FROM procurement.request_log l LEFT JOIN staff s ON s.staff_no = l.staff_no WHERE l.request_id = ? ORDER BY l.id`,
-        [id],
-      ),
-    ])
-    return c.json({ ...r, editable: Number(r.status) === 0 && own.includes(Number(r.unitId)), items, log })
-  })
-  .post('/procurement', validate('json', procurementRequestSchema), async (c) => {
-    const me = c.get('staff')
-    const d = c.req.valid('json')
-    if (!me.heads.some((h) => h.unitId === d.unitId)) throw new AppError('You can raise requests only for units you head.', 403)
-    const id = await saveProcurement(me.staffNo, null, d)
-    audit(null, 'create', 'procurement', id, `Staff portal: ${me.fullName} (${me.staffNo}) ${d.submit ? 'submitted' : 'saved a draft'} procurement request #${id} (unit ${d.unitId})`)
-    return c.json({ id }, 201)
-  })
-  .put('/procurement/:id', validate('json', procurementRequestSchema), async (c) => {
-    const me = c.get('staff')
-    const id = parseId(c.req.param('id'))
-    const d = c.req.valid('json')
-    const r = await one<{ unitId: number; status: number }>('SELECT unit_id, status FROM procurement.request WHERE request_id = ?', [id])
-    if (!r || !me.heads.some((h) => h.unitId === Number(r.unitId))) throw notFound('Request')
-    if (Number(r.status) !== 0) throw new AppError('This request has been submitted and can no longer be changed.', 409)
-    await saveProcurement(me.staffNo, id, { ...d, unitId: Number(r.unitId) })
-    audit(null, 'update', 'procurement', id, `Staff portal: ${me.fullName} (${me.staffNo}) ${d.submit ? 'submitted' : 'updated the draft of'} procurement request #${id}`)
-    return c.json({ id })
-  })
-  .delete('/procurement/:id', async (c) => {
-    const me = c.get('staff')
-    const id = parseId(c.req.param('id'))
-    const r = await one<{ unitId: number; status: number }>('SELECT unit_id, status FROM procurement.request WHERE request_id = ?', [id])
-    if (!r || !me.heads.some((h) => h.unitId === Number(r.unitId))) throw notFound('Request')
-    if (Number(r.status) !== 0) throw new AppError('Only a draft can be deleted.', 409)
-    await withTransaction(async (conn) => {
-      await exec('DELETE FROM procurement.request_breakdown WHERE request_id = ?', [id], conn)
-      await exec('DELETE FROM procurement.request_log WHERE request_id = ?', [id], conn)
-      await exec('DELETE FROM procurement.request WHERE request_id = ? AND status = 0', [id], conn)
-    })
-    audit(null, 'delete', 'procurement', id, `Staff portal: ${me.fullName} (${me.staffNo}) deleted draft procurement request #${id}`)
-    return c.json({ ok: true })
   })
 
   // ------------------------------------------------------------ Appraisals

@@ -26,6 +26,7 @@ import { circularsRoute } from './modules/circulars'
 import { portalRoute } from './modules/portal'
 import { portalAuthRoute } from './modules/portal-auth'
 import { portalManageRoute } from './modules/portal-manage'
+import { portalProcurementRoute } from './modules/portal-procurement'
 import { portalPayslipsRoute } from './modules/portal-payslips'
 import { payslipsRoute } from './modules/payslips'
 import { serviceDeskRoute } from './modules/service-desk'
@@ -60,6 +61,7 @@ app.route('/payslips', payslipsRoute)
 // Staff portal. Sign-in and management are mounted before the staff
 // services, whose sign-in check covers everything else under /portal.
 app.route('/portal/auth', portalAuthRoute)
+app.route('/portal/manage/procurement', portalProcurementRoute)
 app.route('/portal/manage', portalManageRoute)
 app.route('/portal/payslips', portalPayslipsRoute)
 app.route('/portal', portalRoute)
