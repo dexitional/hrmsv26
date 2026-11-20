@@ -14,6 +14,7 @@
 //   GET  /api/study/requests?status=&q=&page=        POST /api/study/requests/:id/decide
 //   CRUD /api/study/benefits
 import { Hono } from 'hono'
+import type { z } from 'zod'
 import { STUDY_STAGES } from '@hrms/db'
 import { requestDecisionSchema, studyBenefitSchema, studyDecisionSchema, studyIntentionSchema, studyLeaveSchema } from '#/lib/schemas'
 import { requirePermission } from '../lib/auth'
@@ -87,6 +88,72 @@ function leaveColumns(data: ReturnType<typeof studyLeaveSchema.parse>) {
   return digitKeys({ ...data, studyBenefits: data.studyBenefits.join(',') || null })
 }
 
+/** An intention to study with the applicant and its approval trail (admin, staff portal and heads print it). */
+export async function loadIntention(id: number) {
+  const intention = await one(`SELECT ${INTENTION_COLUMNS} FROM study_intention i LEFT JOIN staff s ON s.staff_no = i.staff_no ${PLACEMENT} WHERE i.id = ?`, [id])
+  if (!intention) return null
+  const [staff, activities] = await Promise.all([
+    one(`SELECT ${BRIEF_COLUMNS} FROM staff s ${PLACEMENT} WHERE s.staff_no = ?`, [intention.staffNo]),
+    rows(
+      `SELECT a.id, a.stage_activity, a.comments, a.promo_status, a.activity, a.activity_date, a.user_id,
+              ${nameSql()} AS user_name, u.long_name AS unit_name
+         FROM tndstudy_activities a LEFT JOIN staff s ON s.staff_no = a.user_id LEFT JOIN unit u ON u.id = a.unit_id
+        WHERE a.studyform_id = ? ORDER BY a.activity_date, a.id`,
+      [id],
+    ),
+  ])
+  return { ...intention, stageLabel: STUDY_STAGES[intention.appstatus], staff, activities } as Record<string, any>
+}
+
+/** Writes the intention form's answers; returns which changed (none: nothing written). */
+export async function updateIntention(id: number, d: z.output<typeof studyIntentionSchema>) {
+  const before = await one<Record<string, unknown>>(`SELECT ${INTENTION_FORM.join(', ')}, staff_no FROM study_intention WHERE id = ?`, [id])
+  if (!before) return null
+  const values: Record<string, unknown> = {
+    college: d.college,
+    department: d.department,
+    present_rank: d.presentRank,
+    high_edu: d.highEdu,
+    study_leave: d.studyLeave,
+    int_prog: d.intProg,
+    study_place: d.studyPlace,
+    date_commence: d.dateCommence,
+    prog_duration: d.progDuration,
+    prog_type: d.progType,
+    study_mode: d.studyMode,
+    other_study_mode: d.studyMode === 'OTHERS' ? d.otherStudyMode : null,
+    sponsor_kind: d.sponsorKind,
+    other_scholarship: d.otherScholarship,
+    estimated_fees: d.estimatedFees,
+    prog_relevance: d.progRelevance,
+    sub_date: d.subDate,
+  }
+  // Which answers changed, for the activity log (camel-cased keys from the row mapper).
+  const camel = (k: string) => k.replace(/_([a-z])/g, (_, ch: string) => ch.toUpperCase())
+  const norm = (v: unknown) => (v == null || v === '' || v === '0000-00-00' ? '' : String(v).trim())
+  const changed = INTENTION_FORM.filter((k) => norm(before[camel(k)]) !== norm(values[k]))
+  if (changed.length) await exec(`UPDATE study_intention SET ${INTENTION_FORM.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, [...INTENTION_FORM.map((k) => values[k]), id])
+  return { staffNo: String(before.staffNo), changed }
+}
+
+/** Removes an application and its approval trail (refused once study leave was granted from it). */
+export async function deleteIntention(id: number) {
+  const app = await one<{ staffNo: string; intProg: string | null }>('SELECT staff_no, int_prog FROM study_intention WHERE id = ?', [id])
+  if (!app) throw notFound('Application')
+  const leave = await scalar('SELECT id FROM study_leave WHERE intention_id = ? LIMIT 1', [id])
+  if (leave) throw new AppError(`Study leave #${leave} was granted from this application. Delete that study leave record first.`, 409)
+  const trail = await withTransaction(async (conn) => {
+    const a = await exec('DELETE FROM tndstudy_activities WHERE studyform_id = ?', [id], conn)
+    await exec('DELETE FROM study_intention WHERE id = ?', [id], conn)
+    return a.affectedRows
+  })
+  return { ...app, trail }
+}
+
+/** SQL: the applicant may still change or withdraw it — no one has acted on it yet (with the head of unit, or a draft). */
+export const INTENTION_HEAD_PENDING = `i.appstatus IN (0, 1) AND COALESCE(i.stage_status, 0) <> 2
+  AND NOT EXISTS (SELECT 1 FROM tndstudy_activities ta WHERE ta.studyform_id = i.id)`
+
 export const studyRoute = new Hono()
   // ------------------------------------------------------------ Intentions
   .get('/intentions', view, async (c) => {
@@ -120,20 +187,9 @@ export const studyRoute = new Hono()
     })
   })
   .get('/intentions/:id', view, async (c) => {
-    const id = parseId(c.req.param('id'))
-    const intention = await one(`SELECT ${INTENTION_COLUMNS} FROM study_intention i LEFT JOIN staff s ON s.staff_no = i.staff_no ${PLACEMENT} WHERE i.id = ?`, [id])
+    const intention = await loadIntention(parseId(c.req.param('id')))
     if (!intention) throw notFound('Application')
-    const [staff, activities] = await Promise.all([
-      one(`SELECT ${BRIEF_COLUMNS} FROM staff s ${PLACEMENT} WHERE s.staff_no = ?`, [intention.staffNo]),
-      rows(
-        `SELECT a.id, a.stage_activity, a.comments, a.promo_status, a.activity, a.activity_date, a.user_id,
-                ${nameSql()} AS user_name, u.long_name AS unit_name
-           FROM tndstudy_activities a LEFT JOIN staff s ON s.staff_no = a.user_id LEFT JOIN unit u ON u.id = a.unit_id
-          WHERE a.studyform_id = ? ORDER BY a.activity_date, a.id`,
-        [id],
-      ),
-    ])
-    return c.json({ ...intention, stageLabel: STUDY_STAGES[intention.appstatus], staff, activities })
+    return c.json(intention)
   })
   .post('/intentions/:id/decide', edit, validate('json', studyDecisionSchema), async (c) => {
     const id = parseId(c.req.param('id'))
@@ -171,51 +227,16 @@ export const studyRoute = new Hono()
 
   .put('/intentions/:id', edit, validate('json', studyIntentionSchema), async (c) => {
     const id = parseId(c.req.param('id'))
-    const me = c.get('user')
-    const d = c.req.valid('json')
-    const before = await one<Record<string, unknown>>(`SELECT ${INTENTION_FORM.join(', ')}, staff_no FROM study_intention WHERE id = ?`, [id])
-    if (!before) throw notFound('Application')
-    const values: Record<string, unknown> = {
-      college: d.college,
-      department: d.department,
-      present_rank: d.presentRank,
-      high_edu: d.highEdu,
-      study_leave: d.studyLeave,
-      int_prog: d.intProg,
-      study_place: d.studyPlace,
-      date_commence: d.dateCommence,
-      prog_duration: d.progDuration,
-      prog_type: d.progType,
-      study_mode: d.studyMode,
-      other_study_mode: d.studyMode === 'OTHERS' ? d.otherStudyMode : null,
-      sponsor_kind: d.sponsorKind,
-      other_scholarship: d.otherScholarship,
-      estimated_fees: d.estimatedFees,
-      prog_relevance: d.progRelevance,
-      sub_date: d.subDate,
-    }
-    // Which answers changed, for the activity log (camel-cased keys from the row mapper).
-    const camel = (k: string) => k.replace(/_([a-z])/g, (_, ch: string) => ch.toUpperCase())
-    const norm = (v: unknown) => (v == null || v === '' || v === '0000-00-00' ? '' : String(v).trim())
-    const changed = INTENTION_FORM.filter((k) => norm(before[camel(k)]) !== norm(values[k]))
-    if (!changed.length) return c.json({ ok: true, changed: 0 })
-    await exec(`UPDATE study_intention SET ${INTENTION_FORM.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, [...INTENTION_FORM.map((k) => values[k]), id])
-    audit(me, 'update', 'study', id, `Edited the intention to study of staff ${before.staffNo} on their behalf: ${changed.map((k) => INTENTION_LABELS[k]).join(', ')}`)
-    return c.json({ ok: true, changed: changed.length })
+    const r = await updateIntention(id, c.req.valid('json'))
+    if (!r) throw notFound('Application')
+    if (r.changed.length)
+      audit(c.get('user'), 'update', 'study', id, `Edited the intention to study of staff ${r.staffNo} on their behalf: ${r.changed.map((k) => INTENTION_LABELS[k]).join(', ')}`)
+    return c.json({ ok: true, changed: r.changed.length })
   })
   .delete('/intentions/:id', manage, async (c) => {
     const id = parseId(c.req.param('id'))
-    const me = c.get('user')
-    const app = await one<{ staffNo: string; intProg: string | null }>('SELECT staff_no, int_prog FROM study_intention WHERE id = ?', [id])
-    if (!app) throw notFound('Application')
-    const leave = await scalar('SELECT id FROM study_leave WHERE intention_id = ? LIMIT 1', [id])
-    if (leave) throw new AppError(`Study leave #${leave} was granted from this application. Delete that study leave record first.`, 409)
-    const trail = await withTransaction(async (conn) => {
-      const a = await exec('DELETE FROM tndstudy_activities WHERE studyform_id = ?', [id], conn)
-      await exec('DELETE FROM study_intention WHERE id = ?', [id], conn)
-      return a.affectedRows
-    })
-    audit(me, 'delete', 'study', id, `Deleted the intention to study of staff ${app.staffNo}${app.intProg ? ` (${String(app.intProg).slice(0, 80)})` : ''} and ${trail} approval record${trail === 1 ? '' : 's'}`)
+    const r = await deleteIntention(id)
+    audit(c.get('user'), 'delete', 'study', id, `Deleted the intention to study of staff ${r.staffNo}${r.intProg ? ` (${String(r.intProg).slice(0, 80)})` : ''} and ${r.trail} approval record${r.trail === 1 ? '' : 's'}`)
     return c.json({ ok: true })
   })
 

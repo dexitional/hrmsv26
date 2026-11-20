@@ -362,3 +362,298 @@ body {
     animation: none;
   }
 }
+
+/* ------------------------------------------------- Payslip (XPay layout)
+   The payslip and its modal as the University's XPay portal showed them. That
+   portal was built on the Remark admin theme (Bootstrap 3): Roboto 14px with a
+   1.5714 line height in #76838f, bold at 500, headings at 300 in #37474f with
+   a faint text shadow, modal-lg 900px. Plain CSS so the metrics stay exact. */
+
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(/fonts/roboto/roboto-variable.woff2) format('woff2');
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(/fonts/roboto/roboto-variable-italic.woff2) format('woff2');
+}
+/* The Slick carousel's icon font (arrows and dots) for the payslip year slider. */
+@font-face {
+  font-family: 'slick';
+  font-weight: normal;
+  font-style: normal;
+  src: url(/fonts/slick.woff) format('woff');
+}
+
+/* The slip itself is set in Times New Roman, black, as XPay printed it. */
+.xpay-slip,
+.xpay-slip table,
+.xpay-slip td {
+  font-family: 'Times New Roman', Times, serif !important;
+  color: #000;
+}
+.xpay-slip {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.42857143;
+  /* Times has only regular and bold: a hairline stroke makes the regular
+     text a little heavier, on screen and on paper. */
+  -webkit-text-stroke: 0.18px currentColor;
+  -webkit-font-smoothing: auto;
+}
+.xpay-slip table.slip {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  background: transparent;
+}
+.xpay-slip table.slip td {
+  padding: 0 1px;
+  vertical-align: middle;
+}
+/* Allowance and deduction lines sit closer together than the particulars. */
+.xpay-slip table.slip tr.item td {
+  line-height: 1.25;
+}
+.xpay-slip .nowrap {
+  white-space: nowrap;
+}
+/* Times has no 500 weight; bold labels use its bold face. */
+.xpay-slip b,
+.xpay-slip strong {
+  font-weight: 700;
+}
+.xpay-slip em {
+  font-style: italic;
+}
+.xpay-slip hr {
+  height: 0;
+  box-sizing: content-box;
+  margin: 2px 0;
+  border: 0;
+  border-top: 1px solid #e4eaec;
+  border-bottom: 1px solid #666;
+}
+.xpay-slip hr.xpay-foot {
+  margin: 30px 0 0;
+  border-bottom-color: #bbb;
+}
+.xpay-slip .pull-left {
+  float: left;
+}
+.xpay-slip .pull-right {
+  float: right;
+}
+.xpay-slip .dbl {
+  border-bottom: 3px double;
+  padding-left: 10px;
+}
+.xpay-slip table.loans {
+  width: 100%;
+  font-size: 14px;
+  border-collapse: separate;
+  border-spacing: 2px 0;
+}
+.xpay-slip table.loans td {
+  padding: 0 1px;
+  white-space: nowrap;
+}
+.xpay-slip table.loans tr.sum td:not(:first-child) {
+  border-top: 1px solid;
+  border-bottom: 3px double;
+}
+.xpay-slip-paper {
+  background-color: #fff;
+  background-image: url(/print/payslip-bg.jpg);
+  background-size: 450px auto;
+  background-position: left top;
+  background-repeat: repeat;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* The modal (Remark .modal / .modal-lg). */
+.xpay-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+.xpay-modal {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  line-height: 1.57142857;
+  color: #76838f;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  width: auto;
+  margin: 10px;
+}
+@media (min-width: 768px) {
+  .xpay-modal {
+    width: 600px;
+    margin: 30px auto;
+  }
+}
+@media (min-width: 992px) {
+  .xpay-modal {
+    width: 960px;
+  }
+}
+@media (min-width: 1200px) {
+  .xpay-modal {
+    width: 1020px;
+  }
+}
+.xpay-modal .modal-content {
+  background: #fff;
+  background-clip: padding-box;
+  border: none;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  outline: 0;
+}
+.xpay-modal .modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 20px;
+  border-bottom: none;
+}
+.xpay-modal .modal-title {
+  flex: 1;
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1.2;
+  color: #37474f;
+  text-shadow: rgba(0, 0, 0, 0.15) 0 0 1px;
+}
+.xpay-modal .close {
+  order: 3;
+  margin-top: -2px;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+  color: #000;
+  text-shadow: none;
+  opacity: 0.2;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+.xpay-modal .close:hover {
+  opacity: 0.5;
+}
+.xpay-modal .modal-body {
+  position: relative;
+  padding: 20px;
+}
+.xpay-modal .modal-footer {
+  padding: 6px 20px 20px;
+  text-align: center;
+  border-top: none;
+}
+.xpay-modal .modal-footer .btn + .btn {
+  margin-left: 5px;
+}
+.xpay-modal .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 15px;
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.57142857;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  vertical-align: middle;
+  transition: border 0.2s linear, color 0.2s linear, width 0.2s linear, background-color 0.2s linear;
+  -webkit-font-smoothing: subpixel-antialiased;
+}
+.xpay-modal .btn svg {
+  width: 14px;
+  height: 14px;
+}
+.xpay-modal .btn-in-modal-header {
+  padding: 4px 10px;
+}
+.xpay-modal .btn-danger {
+  color: #fff;
+  background: #f96868;
+  border-color: #f96868;
+}
+.xpay-modal .btn-danger:hover {
+  background: #fa7a7a;
+  border-color: #fa7a7a;
+}
+.xpay-modal .btn-danger.active {
+  background: #e9595b;
+  border-color: #e9595b;
+}
+.xpay-modal .btn-success {
+  color: #fff;
+  background: #46be8a;
+  border-color: #46be8a;
+}
+.xpay-modal .btn-success:hover {
+  background: #5cd29d;
+  border-color: #5cd29d;
+}
+.xpay-modal .btn-default {
+  color: #76838f;
+  background: #e4eaec;
+  border-color: #e4eaec;
+}
+.xpay-modal .btn-default:hover {
+  color: #76838f;
+  background: #f3f7f9;
+  border-color: #f3f7f9;
+}
+.xpay-modal .table-responsive {
+  overflow-x: auto;
+}
+
+/* Slick arrows and dots, as on the old payslip year slider. */
+.slick-glyph {
+  font-family: 'slick';
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Printing a payslip from its modal: a print-only copy of the slip sits
+   beside the page and, while printing, is the only thing on paper. The 900px
+   XPay layout is kept whole and scaled to 79% to sit inside a portrait A4
+   page (about 718px between 10mm margins), on the security paper. */
+.payslip-print-root {
+  display: none;
+}
+@media print {
+  html.printing-payslip body > *:not(.payslip-print-root) {
+    display: none !important;
+  }
+  html.printing-payslip,
+  html.printing-payslip body {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  html.printing-payslip .payslip-print-root {
+    display: block;
+    box-sizing: border-box;
+    min-height: 296mm;
+    padding: 10mm;
+  }
+  html.printing-payslip .payslip-print-root .xpay-slip {
+    width: 900px;
+    zoom: 0.79;
+  }
+}
+

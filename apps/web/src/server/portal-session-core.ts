@@ -6,7 +6,8 @@ import { ACTIVE_STAFF_STATUSES, getPool } from '@hrms/db'
 import type { UserRole } from '@hrms/db'
 import type { RowDataPacket } from 'mysql2'
 import { properName } from '#/lib/text-case'
-import { PORTAL_TTL_SECONDS } from './portal-session'
+import { SWITCH_ACCESS_ROLES } from '#/lib/permissions'
+import { PORTAL_TTL_SECONDS, SWITCH_TTL_SECONDS } from './portal-session'
 
 function secret(): string {
   const s = process.env.SESSION_SECRET
@@ -16,21 +17,51 @@ function secret(): string {
 
 // `kind` keeps admin and staff tokens apart: both are signed with the same
 // secret, and an admin token's `sub` is an account id, not a staff number.
-export async function signStaffToken(staffNo: number): Promise<string> {
+// `act` marks an administrator's switched access: the admin account acting
+// as the staff member (Admin → Staff → Switch Access).
+export async function signStaffToken(staffNo: number, actor?: number): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
-  return sign({ sub: staffNo, kind: 'staff', iat: now, exp: now + PORTAL_TTL_SECONDS }, secret(), 'HS256')
+  return sign(
+    { sub: staffNo, kind: 'staff', ...(actor ? { act: actor } : {}), iat: now, exp: now + (actor ? SWITCH_TTL_SECONDS : PORTAL_TTL_SECONDS) },
+    secret(),
+    'HS256',
+  )
 }
 
-export async function readStaffNoFromToken(token: string | undefined): Promise<number | null> {
+export async function readStaffToken(token: string | undefined): Promise<{ staffNo: number; actor: number | null } | null> {
   if (!token) return null
   try {
     const payload = await verify(token, secret(), 'HS256')
     if (payload.kind !== 'staff') return null
     const no = Number(payload.sub)
-    return Number.isInteger(no) && no > 0 ? no : null
+    if (!Number.isInteger(no) || no <= 0) return null
+    const actor = Number(payload.act)
+    return { staffNo: no, actor: Number.isInteger(actor) && actor > 0 ? actor : null }
   } catch {
     return null
   }
+}
+
+export async function readStaffNoFromToken(token: string | undefined): Promise<number | null> {
+  return (await readStaffToken(token))?.staffNo ?? null
+}
+
+/**
+ * The portal user a token signs in. For switched access, `switchedBy` names
+ * the admin user (administrator or HR officer); it stops working as soon as
+ * that account is inactive or loses that role.
+ */
+export async function portalUserFromToken(token: string | undefined): Promise<PortalUser | null> {
+  const t = await readStaffToken(token)
+  if (!t) return null
+  const user = await getPortalUser(t.staffNo)
+  if (!user || !t.actor) return user
+  const [[admin]] = await getPool().query<Array<RowDataPacket>>(
+    `SELECT id, full_name FROM hrms_users WHERE id = ? AND is_active = 1 AND role IN (${SWITCH_ACCESS_ROLES.map(() => '?').join(', ')})`,
+    [t.actor, ...SWITCH_ACCESS_ROLES],
+  )
+  if (!admin) return null
+  return { ...user, switchedBy: { id: Number(admin.id), name: String(admin.full_name) } }
 }
 
 /** A unit the person heads (or deputises for), and the approval tier it gives. */
@@ -61,6 +92,8 @@ export interface PortalUser {
   isManager: boolean
   /** Their HRMS admin role, when they also have an active admin account. */
   adminRole: UserRole | null
+  /** Set when an administrator is using the portal as this staff member (switched access). */
+  switchedBy: { id: number; name: string } | null
 }
 
 const ACTIVE = `(${ACTIVE_STAFF_STATUSES.map((s) => `'${s}'`).join(', ')})`
@@ -121,5 +154,6 @@ export async function getPortalUser(staffNo: number): Promise<PortalUser | null>
     headTitle: headTitle(headList),
     isManager: headList.length > 0 || Number(approver?.n ?? 0) > 0,
     adminRole: (admin?.role as UserRole) ?? null,
+    switchedBy: null,
   }
 }

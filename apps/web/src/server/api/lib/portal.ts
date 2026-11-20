@@ -13,7 +13,7 @@
 import type { Context, Next } from 'hono'
 import { getCookie } from 'hono/cookie'
 import { PORTAL_COOKIE } from '#/server/portal-session'
-import { getPortalUser, readStaffNoFromToken } from '#/server/portal-session-core'
+import { portalUserFromToken } from '#/server/portal-session-core'
 import type { PortalUser } from '#/server/portal-session-core'
 import { rows } from './db'
 import { AppError } from './errors'
@@ -26,8 +26,7 @@ declare module 'hono' {
 }
 
 export async function portalUser(c: Context): Promise<PortalUser | null> {
-  const staffNo = await readStaffNoFromToken(getCookie(c, PORTAL_COOKIE))
-  return staffNo ? getPortalUser(staffNo) : null
+  return portalUserFromToken(getCookie(c, PORTAL_COOKIE))
 }
 
 export async function requireStaffUser(c: Context, next: Next) {

@@ -18,10 +18,12 @@ import bcrypt from 'bcryptjs'
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
-import { changePasswordSchema, loginSchema } from '#/lib/schemas'
+import { changePasswordSchema, loginSchema, switchAccessSchema } from '#/lib/schemas'
+import { properName } from '#/lib/text-case'
+import { SWITCH_ACCESS_ROLES } from '#/lib/permissions'
 import { SESSION_COOKIE, SESSION_TTL_SECONDS } from '#/server/session'
 import { signSessionToken } from '#/server/session-core'
-import { requireUser, sessionUser } from '../lib/auth'
+import { requireRoles, requireUser, sessionUser } from '../lib/auth'
 import { audit } from '../lib/audit'
 import { exec, one } from '../lib/db'
 import { AppError } from '../lib/errors'
@@ -233,6 +235,21 @@ export const authRoute = new Hono()
     if (!staffNo) throw new AppError('Your staff record is not active, so the staff portal is not available.', 403)
     await startStaffSession(c, staffNo, 'admin')
     return c.json({ ok: true })
+  })
+
+  // Administrators and HR officers (staff: manage): use the staff portal as a
+  // staff member sees it (their own menus, head of unit / dean / director tools
+  // included), until they switch back. The admin session is left as it is; the
+  // switch is audited.
+  .post('/switch-access', requireRoles(SWITCH_ACCESS_ROLES), validate('json', switchAccessSchema), async (c) => {
+    const me = c.get('user')
+    const { staffNo: wanted } = c.req.valid('json')
+    const staffNo = await googleStaff(String(wanted))
+    if (!staffNo) throw new AppError('That staff record is not active, so it has no staff portal access.', 422)
+    await startStaffSession(c, staffNo, 'switch', me.id)
+    const name = await one<{ name: string }>(`SELECT TRIM(CONCAT_WS(' ', fname, lname)) AS name FROM staff WHERE staff_no = ?`, [staffNo])
+    audit(me, 'switch', 'staff', staffNo, `Switched access to the staff portal as ${properName(name?.name ?? '') || 'staff'} (${staffNo})`)
+    return c.json({ ok: true, to: '/portal' })
   })
 
   .post('/logout', (c) => {

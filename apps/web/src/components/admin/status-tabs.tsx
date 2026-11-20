@@ -6,14 +6,17 @@ export function StatusTabs({
   onChange,
   options,
   counts,
+  total,
 }: {
   value: string
   onChange: (v: string) => void
   options: Array<{ value: string; label: string }>
   counts?: Array<{ status: string; count: number }>
+  /** The "All" count, when the tabs overlap rather than split the list (default: the sum of the counts). */
+  total?: number
 }) {
   const countOf = (s: string) => Number(counts?.find((c) => c.status === s)?.count ?? 0)
-  const all = (counts ?? []).reduce((s, c) => s + Number(c.count), 0)
+  const all = total ?? (counts ?? []).reduce((s, c) => s + Number(c.count), 0)
   return (
     <div className="no-scrollbar mb-4 flex gap-1.5 overflow-x-auto">
       {[{ value: '', label: 'All' }, ...options].map((o) => (

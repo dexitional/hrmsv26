@@ -11,7 +11,9 @@
 //   GET  /api/portal/colleagues?q=     relievers to choose from
 //   GET  /api/portal/promotion          POST /api/portal/promotion (draft or submit)
 //   GET|PUT|DELETE /api/portal/promotion/:id   POST /api/portal/promotion/:id/resubmit   GET /api/portal/promotion/:id/file?path=
-//   GET  /api/portal/study
+//   GET  /api/portal/study      GET /api/portal/study/intentions/:id (own, printable)
+//   PUT/DELETE /api/portal/study/intentions/:id   own, only while it is still with the head of unit
+//   GET  /api/portal/disciplinary   own record (printable)
 //   GET  /api/portal/appraisal          GET /api/portal/appraisal/questions
 //   GET  /api/portal/appraisal/a/:year  POST /api/portal/appraisal/a/:year/sign   (Form A: comment and sign)
 //   POST /api/portal/appraisal/b        GET|PUT /api/portal/appraisal/b/:id       (Form B: self-appraisal)
@@ -21,10 +23,10 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { STUDY_STAGES } from '@hrms/db'
-import { contactUpdateSchema, formASignSchema, portalLeaveSchema, promotionApplySchema, promotionResubmitSchema, selfAppraisalSchema, serviceRequestSchema } from '#/lib/schemas'
+import { contactUpdateSchema, formASignSchema, studyIntentionSchema, portalLeaveSchema, promotionApplySchema, promotionResubmitSchema, selfAppraisalSchema, serviceRequestSchema } from '#/lib/schemas'
 import { EMPLOYEE_SIGNED, appraisalQuestions, formASummaries, loadFormA, loadFormB } from '../lib/appraisal'
 import { audit } from '../lib/audit'
-import { loadPromotion, notifyLevelHeads, promotionState, resubmit, saveApplication, streamPromotionFile } from '../lib/promotion'
+import { applicantParticulars, checkApplicant, loadPromotion, notifyLevelHeads, promotionState, resubmit, saveApplication, streamPromotionFile } from '../lib/promotion'
 import { exec, insert, like, one, paging, parseId, rows, scalar } from '../lib/db'
 import { AppError, notFound } from '../lib/errors'
 import { BRIEF_COLUMNS, PLACEMENT, countsWeekends, leavePeriod, leaveYear, nameSql, requireStaff } from '../lib/hr'
@@ -34,6 +36,8 @@ import { validate } from '../lib/validate'
 import { properName } from '#/lib/text-case'
 import { publicLink } from './circulars'
 import { checkApplication } from './leave'
+import { disciplinaryHistory } from './disciplinary'
+import { INTENTION_HEAD_PENDING, deleteIntention, loadIntention, updateIntention } from './study'
 import { listBanks, listQualifications, listRelatives } from './staff-records'
 import { loadStaffProfile } from './staff'
 
@@ -45,6 +49,17 @@ const MY_CIRCULARS = `FROM hrms_circular_recipients r
   JOIN circular c ON c.id = r.circular_id AND c.stage IN ('PUBLISHED', 'ARCHIVED') AND c.published_by IS NOT NULL
   LEFT JOIN notification n ON n.id = r.notification_id
   WHERE r.staff_no = ?`
+
+/** The staff member's own intention to study, while it is still with the head of unit. */
+async function ownPendingIntention(staffNo: number, id: number) {
+  const app = await one<{ intProg: string | null; editable: number }>(
+    `SELECT i.int_prog, (${INTENTION_HEAD_PENDING}) AS editable FROM study_intention i WHERE i.id = ? AND i.staff_no = ?`,
+    [id, String(staffNo)],
+  )
+  if (!app) throw notFound('Application')
+  if (!Number(app.editable)) throw new AppError('This application is already being considered, so it can no longer be changed or withdrawn. Ask HR if something needs correcting.', 409)
+  return app
+}
 
 export const portalRoute = new Hono()
   .use(requireStaffUser)
@@ -252,6 +267,31 @@ export const portalRoute = new Hono()
 
   // ------------------------------------------------------------ Promotion & contract renewal
 
+  // While it is still with the head of unit (no one has acted on it), the applicant may correct or withdraw it.
+  .put('/study/intentions/:id', validate('json', studyIntentionSchema), async (c) => {
+    const me = c.get('staff')
+    const id = parseId(c.req.param('id'))
+    await ownPendingIntention(me.staffNo, id)
+    const r = await updateIntention(id, c.req.valid('json'))
+    if (r?.changed.length) audit(null, 'update', 'study', id, say(me, `edited their intention to study (#${id}): ${r.changed.join(', ').replace(/_/g, ' ')}`))
+    return c.json({ ok: true, changed: r?.changed.length ?? 0 })
+  })
+  .delete('/study/intentions/:id', async (c) => {
+    const me = c.get('staff')
+    const id = parseId(c.req.param('id'))
+    const app = await ownPendingIntention(me.staffNo, id)
+    await deleteIntention(id)
+    audit(null, 'delete', 'study', id, say(me, `withdrew and deleted their intention to study (#${id}${app.intProg ? `, ${String(app.intProg).slice(0, 80)}` : ''})`))
+    return c.json({ ok: true })
+  })
+  .get('/study/intentions/:id', async (c) => {
+    const me = c.get('staff')
+    const intention = await loadIntention(parseId(c.req.param('id')))
+    if (!intention || Number(intention.staffNo) !== me.staffNo) throw notFound('Application')
+    return c.json(intention)
+  })
+  // The staff member's own disciplinary record (read-only).
+  .get('/disciplinary', async (c) => c.json(await disciplinaryHistory(c.get('staff').staffNo)))
   .get('/promotion', async (c) => {
     const me = c.get('staff')
     const [applications, mine] = await Promise.all([
@@ -273,7 +313,10 @@ export const portalRoute = new Hono()
     return c.json({
       applications: applications.map((a) => ({ ...a, state: promotionState(a as never) })),
       ranks,
+      // Senior members fill the full promotion form and may apply for contract renewal.
       detailed: me.staffGroup === 'SM',
+      canRenew: me.staffGroup === 'SM',
+      particulars: me.staffGroup === 'SM' ? { ...(await applicantParticulars(me.staffNo)), academic: mine?.jobType === 'ACADEMIC' } : null,
       open: { promotion: open(0)?.id ?? null, renewal: open(1)?.id ?? null },
     })
   })
@@ -287,6 +330,7 @@ export const portalRoute = new Hono()
   .post('/promotion', validate('json', promotionApplySchema), async (c) => {
     const me = c.get('staff')
     const d = c.req.valid('json')
+    checkApplicant(me, d)
     if (!d.submit && me.staffGroup !== 'SM') d.submit = true
     const id = await saveApplication(me, d, null)
     audit(null, 'create', 'promotion', id, say(me, d.submit ? `applied for ${d.type === 1 ? 'contract renewal' : 'promotion'} (#${id})` : `saved a draft promotion application (#${id})`))
@@ -295,6 +339,7 @@ export const portalRoute = new Hono()
   })
   .put('/promotion/:id', validate('json', promotionApplySchema), async (c) => {
     const me = c.get('staff')
+    checkApplicant(me, c.req.valid('json'))
     const id = parseId(c.req.param('id'))
     const draft = await one('SELECT promotion_id FROM staff_promotion WHERE promotion_id = ? AND staff_no = ? AND promo_status = 0', [id, String(me.staffNo)])
     if (!draft) throw new AppError('Only a draft can be edited. A submitted application changes only when a level returns it to you.', 409)
@@ -327,8 +372,9 @@ export const portalRoute = new Hono()
     const me = c.get('staff')
     const [intentions, requests, leaves] = await Promise.all([
       rows<Record<string, any>>(
-        `SELECT id, int_prog, study_place, date_commence, prog_duration, study_mode, appstatus, stage_status, sub_date, remarks
-           FROM study_intention WHERE staff_no = ? ORDER BY sub_date DESC, id DESC`,
+        `SELECT i.id, i.int_prog, i.study_place, i.date_commence, i.prog_duration, i.study_mode, i.appstatus, i.stage_status, i.sub_date, i.remarks,
+                (${INTENTION_HEAD_PENDING}) AS editable
+           FROM study_intention i WHERE i.staff_no = ? ORDER BY i.sub_date DESC, i.id DESC`,
         [me.staffNo],
       ),
       rows('SELECT id, study_type, study_nature, study_program, study_institute, study_start, study_end, apply_status, apply_date FROM study_request WHERE staff_no = ? ORDER BY apply_date DESC', [me.staffNo]),
@@ -426,7 +472,18 @@ export const portalRoute = new Hono()
           [String(me.staffNo), String(year)],
         )
       : []
-    return c.json({ years, year, months })
+    // The form's employee block: the name and SSN as filed with GRA, the rank and unit from the staff record.
+    const employee = year
+      ? await one(
+          `SELECT g.EmployeeName AS employee_name, g.SSN AS ssn, g.JobTitle AS filed_title, j.title AS job_title, u.long_name AS unit_name,
+                  s.ghana_card_no, s.staff_no
+             FROM gratax g LEFT JOIN staff s ON s.staff_no = g.EmployeeNumber LEFT JOIN promotion p ON p.id = s.promo_id
+             LEFT JOIN unit u ON u.id = p.unit_id LEFT JOIN job j ON j.id = p.job_id
+            WHERE g.EmployeeNumber = ? AND g.TheYear = ? ORDER BY CAST(g.TheMonth AS UNSIGNED) DESC LIMIT 1`,
+          [String(me.staffNo), String(year)],
+        )
+      : null
+    return c.json({ years, year, months, employee })
   })
 
   // ------------------------------------------------------------ Support requests

@@ -36,7 +36,9 @@ import {
   PageHeader,
   StatusBadge,
 } from '#/components/admin/page'
-import { useCan } from '#/components/admin/session'
+import { useCan, useUser } from '#/components/admin/session'
+import { AccessUspButton, SwitchAccessButton } from '#/components/staff/switch-access'
+import { SWITCH_ACCESS_ROLES } from '#/lib/permissions'
 import { ProfileSkeleton } from '#/components/admin/skeletons'
 import { BanksTab } from '#/components/staff/banks'
 import { QualificationsTab } from '#/components/staff/qualifications'
@@ -86,6 +88,7 @@ function StaffProfile() {
   const { tab = 'overview' } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const canEdit = useCan('staff', 'edit')
+  const canSwitchAccess = SWITCH_ACCESS_ROLES.includes(useUser().role)
   const {
     data: s,
     isLoading,
@@ -178,6 +181,8 @@ function StaffProfile() {
                 </Link>
               </Button>
             )}
+            <AccessUspButton staffNo={Number(s.staffNo)} />
+            {canSwitchAccess && <SwitchAccessButton staffNo={Number(s.staffNo)} />}
           </>
         }
       />

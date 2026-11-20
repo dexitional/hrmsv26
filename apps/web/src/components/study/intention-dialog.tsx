@@ -1,6 +1,7 @@
 // The declaration of intention to pursue further studies (legacy
-// study_intention), edited by HR on the staff member's behalf. The questions
-// and their numbering follow the staff portal's form.
+// study_intention), edited by HR on the staff member's behalf, or by the
+// staff member in the staff portal while it is still with their head of unit.
+// The questions and their numbering follow the staff portal's form.
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,7 +22,7 @@ const v = (x: unknown) => (x === null || x === undefined || x === '0000-00-00' ?
 const date = (x: unknown) => v(x).slice(0, 10)
 
 /** `intention` is a row from /study/intentions (or the detail endpoint); null closes the dialog. */
-export function IntentionDialog({ intention, onClose }: { intention: R | null; onClose: () => void }) {
+export function IntentionDialog({ intention, onClose, asStaff = false }: { intention: R | null; onClose: () => void; asStaff?: boolean }) {
   const [error, setError] = useState<string | null>(null)
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<In>({ resolver: zodResolver(studyIntentionSchema) })
   useEffect(() => {
@@ -47,8 +48,8 @@ export function IntentionDialog({ intention, onClose }: { intention: R | null; o
       subDate: date(intention.subDate),
     })
   }, [intention, reset])
-  const save = useSave((d: In) => api.put<{ changed: number }>(`/study/intentions/${intention!.id}`, d), {
-    invalidate: ['study-intention', 'study-intentions'],
+  const save = useSave((d: In) => api.put<{ changed: number }>(`${asStaff ? '/portal/study/intentions' : '/study/intentions'}/${intention!.id}`, d), {
+    invalidate: asStaff ? ['portal'] : ['study-intention', 'study-intentions'],
     success: (r) => (r.changed ? 'Application updated' : 'No changes to save'),
     onDone: onClose,
     onError: setError,
@@ -59,8 +60,14 @@ export function IntentionDialog({ intention, onClose }: { intention: R | null; o
     <FormDialog
       open={Boolean(intention)}
       onOpenChange={(o) => !o && onClose()}
-      title="Edit intention to study"
-      description={intention ? `On behalf of ${intention.fullName ?? `staff ${intention.staffNo}`} (${intention.staffNo}). The approval stage stays as it is; the change is logged against you.` : undefined}
+      title={asStaff ? 'Edit your intention to study' : 'Edit intention to study'}
+      description={
+        !intention
+          ? undefined
+          : asStaff
+            ? 'You can correct it while it is still with your head of unit. Once they act on it, it can no longer be changed.'
+            : `On behalf of ${intention.fullName ?? `staff ${intention.staffNo}`} (${intention.staffNo}). The approval stage stays as it is; the change is logged against you.`
+      }
       submitLabel="Save changes"
       busy={save.isPending}
       error={error}

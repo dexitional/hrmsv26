@@ -9,7 +9,7 @@ import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
 import { api, errorMessage } from '#/lib/api-client'
 import { getPortalSession } from '#/server/portal-session'
 
-const safeNext = (next?: string) => (next && next.startsWith('/portal') && !next.startsWith('//') ? next : '/portal')
+const safeNext = (next?: string) => (next && (next.startsWith('/portal') || next.startsWith('/print/')) && !next.startsWith('//') ? next : '/portal')
 
 const ERRORS: Record<string, string> = {
   no_staff: 'That Google account is not the UCC email on an active staff record. Use a sign-in code instead.',

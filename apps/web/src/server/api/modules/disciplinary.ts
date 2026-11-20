@@ -21,6 +21,13 @@ const COLUMNS = `d.id, d.staff_no, ${nameSql()} AS full_name, u.long_name AS uni
   d.action_type, d.issue_date, d.reason, d.remark`
 const FROM = `FROM disciplinary d LEFT JOIN staff s ON s.staff_no = d.staff_no ${PLACEMENT}`
 
+/** One staff member's disciplinary record (admin printout, and the staff portal for their own). */
+export async function disciplinaryHistory(staffNo: number) {
+  const staff = await requireStaff(staffNo)
+  const records = await rows(`SELECT ${COLUMNS} ${FROM} WHERE d.staff_no = ? AND d.active = '1' ORDER BY d.issue_date DESC`, [staff.staffNo])
+  return { staff, records: records.map(readable) }
+}
+
 export const disciplinaryRoute = new Hono()
   .get('/', requirePermission('disciplinary', 'view'), async (c) => {
     const q = c.req.query()
@@ -39,11 +46,7 @@ export const disciplinaryRoute = new Hono()
     ])
     return c.json({ data: data.map(readable), total, page, pageSize, counts })
   })
-  .get('/history/:staffNo', requirePermission('disciplinary', 'view'), async (c) => {
-    const staff = await requireStaff(Number(c.req.param('staffNo')))
-    const records = await rows(`SELECT ${COLUMNS} ${FROM} WHERE d.staff_no = ? AND d.active = '1' ORDER BY d.issue_date DESC`, [staff.staffNo])
-    return c.json({ staff, records: records.map(readable) })
-  })
+  .get('/history/:staffNo', requirePermission('disciplinary', 'view'), async (c) => c.json(await disciplinaryHistory(Number(c.req.param('staffNo')))))
   .post('/', requirePermission('disciplinary', 'edit'), validate('json', disciplinarySchema), async (c) => {
     const data = c.req.valid('json')
     const staff = await requireStaff(data.staffNo)

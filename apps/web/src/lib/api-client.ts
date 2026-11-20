@@ -36,7 +36,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   // again, then back here. (Sign-in itself answers 401 for a wrong password.)
   if (res.status === 401 && !import.meta.env.SSR && !path.startsWith('/auth/')) {
     const here = window.location.pathname + window.location.search
-    window.location.assign(`/login?next=${encodeURIComponent(here)}`)
+    // Staff-portal calls (including portal printouts) sign in on the portal.
+    window.location.assign(`${path.startsWith('/portal/') ? '/portal/login' : '/login'}?next=${encodeURIComponent(here)}`)
   }
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }))

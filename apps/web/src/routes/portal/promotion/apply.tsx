@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useStaff } from '#/components/portal/session'
 import { useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
 import { api } from '#/lib/api-client'
@@ -15,6 +16,7 @@ function Apply() {
   const { type, draft } = Route.useSearch()
   const info = useQuery({ queryKey: ['portal', 'promotion'], queryFn: () => api.get<Record<string, any>>('/portal/promotion') })
   const existing = useQuery({ queryKey: ['portal', 'promotion-file', draft], queryFn: () => api.get<Record<string, any>>(`/portal/promotion/${draft}`), enabled: Boolean(draft) })
+  const me = useStaff()
   const t = (existing.data ? Number(existing.data.type) : type) as 0 | 1
   const blocked = !draft && info.data && (t === 1 ? info.data.open.renewal : info.data.open.promotion)
   return (
@@ -27,10 +29,19 @@ function Apply() {
       />
       {!info.data || (draft && !existing.data) ? (
         <FormSkeleton />
+      ) : t === 1 && !info.data.canRenew ? (
+        <EmptyState title="Contract renewal is for senior members" description="Senior and junior staff apply for promotion only." />
       ) : blocked ? (
         <EmptyState title="You already have an open application" description="Follow it on the Promotion page; you can apply again once it is decided." />
       ) : (
-        <ApplicationForm type={t} ranks={info.data.ranks} detailed={info.data.detailed} draft={existing.data} />
+        <ApplicationForm
+          type={t}
+          ranks={info.data.ranks}
+          detailed={info.data.detailed}
+          draft={existing.data}
+          particulars={info.data.particulars}
+          applicant={{ fullName: me.fullName, staffNo: me.staffNo }}
+        />
       )}
     </>
   )

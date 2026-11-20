@@ -3,28 +3,7 @@
 import { useState } from 'react'
 import { Link, Outlet, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Bell,
-  BookOpenCheck,
-  CalendarDays,
-  ChevronsUpDown,
-  ClipboardCheck,
-  Clock,
-  FileStack,
-  HeartHandshake,
-  LayoutDashboard,
-  LayoutGrid,
-  LogOut,
-  Megaphone,
-  Receipt,
-  ShoppingCart,
-  TrendingUp,
-  UserRound,
-  Users,
-  Wallet,
-  Wifi,
-  Wrench,
-} from 'lucide-react'
+import { ArrowLeftRight, Banknote, Bell, BookOpenCheck, CalendarDays, ChevronsUpDown, ClipboardCheck, Clock, FileStack, Gavel, GraduationCap, HeartHandshake, LayoutDashboard, LayoutGrid, LogOut, Megaphone, Receipt, ShoppingCart, Target, TrendingUp, UserRound, Users, Wallet, Wifi, Wrench } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@hrms/ui'
 import { getPortalSession } from '#/server/portal-session'
@@ -75,6 +54,16 @@ function PortalLayout() {
     queryClient.clear()
     await navigate({ to: '/portal/login' })
   }
+  // An administrator's switched access: back to their own admin session.
+  const switchBack = async () => {
+    try {
+      const r = await api.post<{ to: string }>('/portal/auth/switch-back')
+      queryClient.clear()
+      window.location.assign(r.to)
+    } catch (err) {
+      toast.error(errorMessage(err))
+    }
+  }
   const toAdmin = async () => {
     try {
       await api.post('/portal/auth/to-admin')
@@ -95,7 +84,9 @@ function PortalLayout() {
         { to: '/portal/appraisal', label: 'Appraisal', icon: ClipboardCheck },
         { to: '/portal/promotion', label: 'Promotion', icon: TrendingUp },
         { to: '/portal/study', label: 'Study leave', icon: BookOpenCheck },
+        { to: '/portal/disciplinary', label: 'Disciplinary', icon: Gavel },
         { to: '/portal/attendance', label: 'Attendance', icon: Clock },
+        { to: '/portal/payslips', label: 'Payslips', icon: Banknote },
         { to: '/portal/tax', label: 'GRA ETD', icon: Receipt },
       ],
     },
@@ -118,6 +109,8 @@ function PortalLayout() {
               { to: '/portal/manage/appraisals', label: 'Appraisal manager', icon: ClipboardCheck },
               { to: '/portal/manage/promotions', label: 'Promotion manager', icon: FileStack },
               { to: '/portal/manage/study', label: 'Study leave manager', icon: BookOpenCheck },
+              { to: '/portal/manage/advisers', label: 'Academic Advisor manager', icon: GraduationCap },
+              { to: '/portal/manage/plans', label: 'Operational Plan manager', icon: Target },
               { to: '/portal/manage/procurement', label: 'Procurement manager', icon: ShoppingCart },
             ],
           },
@@ -150,19 +143,35 @@ function PortalLayout() {
             <DropdownItem onSelect={() => navigate({ to: '/portal/profile' })}>
               <UserRound /> My profile
             </DropdownItem>
-            {staff.adminRole && (
+            {staff.switchedBy && (
+              <DropdownItem onSelect={() => void switchBack()}>
+                <ArrowLeftRight /> Switch back to admin
+              </DropdownItem>
+            )}
+            {staff.adminRole && !staff.switchedBy && (
               <DropdownItem onSelect={() => void toAdmin()}>
                 <LayoutGrid /> Switch to HRMS admin
               </DropdownItem>
             )}
             <DropdownSeparator />
-            <DropdownItem danger onSelect={() => void logout()}>
-              <LogOut /> Sign out
+            <DropdownItem danger onSelect={() => void (staff.switchedBy ? switchBack() : logout())}>
+              <LogOut /> {staff.switchedBy ? 'End switched access' : 'Sign out'}
             </DropdownItem>
           </DropdownContent>
         </Dropdown>
       }
     >
+      {staff.switchedBy && (
+        <div role="status" className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <ArrowLeftRight className="size-4 shrink-0" />
+          <p className="min-w-0 flex-1">
+            <b>Switched access.</b> You ({staff.switchedBy.name}) are using the staff portal as <b>{staff.fullName}</b> ({staff.staffNo}). What you do here is done on their behalf.
+          </p>
+          <button type="button" onClick={() => void switchBack()} className="shrink-0 rounded-full bg-amber-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-amber-800">
+            Switch back to admin
+          </button>
+        </div>
+      )}
       <Outlet />
     </AppShell>
   )

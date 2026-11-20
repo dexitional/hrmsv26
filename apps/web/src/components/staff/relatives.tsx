@@ -28,6 +28,8 @@ type Row = Record<string, any> & { id: number }
 type In = z.input<typeof relativeSchema>
 const yes = (v: unknown) => v === '1' || v === 1 || v === true
 const cap = (s: string) => s.charAt(0) + s.slice(1).toLowerCase()
+/** Codes follow spouses → children → parents → others, so adding or removing one can move others. */
+const renumberedNote = (n: number | undefined) => (n ? `; ${n} other code${n === 1 ? '' : 's'} renumbered` : '')
 
 export function RelativesTab({ staffNo }: { staffNo: string }) {
   const canEdit = useCan('staff', 'edit')
@@ -36,7 +38,10 @@ export function RelativesTab({ staffNo }: { staffNo: string }) {
   const [form, setForm] = useState<{ row: Row | null } | null>(null)
   const [pdf, setPdf] = useState<string | null>(null)
   const { data, isLoading } = useQuery({ queryKey: ['relatives', staffNo], queryFn: () => api.get<Array<Row>>(`/staff-records/${staffNo}/relatives`) })
-  const remove = useSave((id: number) => api.delete(`/staff-records/relatives/${id}`), { invalidate: ['relatives'], success: 'Relative removed' })
+  const remove = useSave((id: number) => api.delete<{ renumbered: number }>(`/staff-records/relatives/${id}`), {
+    invalidate: ['relatives'],
+    success: (r) => `Relative removed${renumberedNote(r.renumbered)}`,
+  })
   const name = (r: Row) => properName([r.fname, r.mname, r.lname].filter(Boolean).join(' ')) ?? ''
   return (
     <>
@@ -117,9 +122,10 @@ function RelativeDialog({ staffNo, value, onClose }: { staffNo: string; value: {
       active: row ? yes(row.active) : true,
     } as In)
   }, [value, row, reset])
-  const save = useSave((v: In) => (row ? api.put(`/staff-records/relatives/${row.id}`, v) : api.post(`/staff-records/${staffNo}/relatives`, v)), {
+  type Saved = { code?: string | null; renumbered: number }
+  const save = useSave((v: In) => (row ? api.put<Saved>(`/staff-records/relatives/${row.id}`, v) : api.post<Saved>(`/staff-records/${staffNo}/relatives`, v)), {
     invalidate: ['relatives'],
-    success: 'Relative saved',
+    success: (r) => `${r.code ? `Relative added as ${r.code}` : 'Relative saved'}${renumberedNote(r.renumbered)}`,
     onDone: onClose,
     onError: setError,
   })

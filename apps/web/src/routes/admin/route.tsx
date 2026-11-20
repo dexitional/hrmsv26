@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Outlet, createFileRoute, redirect, useNavigate, useRouter } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Activity, ArrowLeftRight, Bell, BookOpenCheck, Briefcase, Building2, CalendarClock, CalendarDays, ChevronsUpDown, Crown, FileStack, Gavel, GraduationCap, KeyRound, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, MessageSquareText, ShieldCheck, TrendingUp, UserRound, Users } from 'lucide-react'
+import { Activity, ArrowLeftRight, Banknote, Bell, BookOpenCheck, Briefcase, Building2, CalendarClock, CalendarDays, ChevronsUpDown, Crown, FileStack, Gavel, GraduationCap, KeyRound, Layers, LayoutDashboard, LifeBuoy, LogOut, Megaphone, MessageSquareText, ShieldCheck, TrendingUp, UserRound, Users } from 'lucide-react'
 import { cn } from '@hrms/ui'
 import { getSession } from '#/server/session'
 import { api, errorMessage } from '#/lib/api-client'
@@ -48,6 +48,7 @@ const NAV: Array<{ heading: string; items: Array<NavItem> }> = [
       { to: '/admin/transfers', label: 'Transfers', icon: ArrowLeftRight, module: 'transfers' },
       { to: '/admin/promotions', label: 'Appointment & Promotion', icon: FileStack, module: 'promotions' },
       { to: '/admin/study', label: 'Study Leave', icon: BookOpenCheck, module: 'study' },
+      { to: '/admin/payslips', label: 'Payslips', icon: Banknote, module: 'payslips' },
       { to: '/admin/disciplinary', label: 'Disciplinary', icon: Gavel, module: 'disciplinary' },
       { to: '/admin/nss', label: 'National Service', icon: GraduationCap, module: 'nss' },
       { to: '/admin/circulars', label: 'Circulars', icon: Megaphone, module: 'circulars' },

@@ -57,7 +57,6 @@ export function DocLink({ path, label, href }: { path: string | null | undefined
 
 export function FileView({ file, docHref }: { file: R; docHref: (path: string) => string }) {
   const d = (file.details ?? {}) as R
-  const filled = PROMOTION_DETAIL_FIELDS.filter((k) => d[k])
   return (
     <div className="space-y-4">
       <Card>
@@ -90,49 +89,13 @@ export function FileView({ file, docHref }: { file: R; docHref: (path: string) =
             <DocLink path={file.appLetter ?? d.appLetter} label="Application letter / form" href={docHref} />
             <DocLink path={file.promoDoc1 ?? d.appCv} label="Curriculum vitae" href={docHref} />
             {(file.promoDoc2 || d.papers) && <DocLink path={file.promoDoc2 || d.papers} label="Papers" href={docHref} />}
+            {d.signature && <DocLink path={d.signature} label="Signature" href={docHref} />}
           </CardBody>
         </Card>
       </div>
 
-      {file.papers?.length > 0 && (
-        <Card>
-          <CardHeader title={`Papers (${file.papers.length})`} />
-          <ul className="divide-y">
-            {(file.papers as Array<R>).map((p, i) => (
-              <li key={p.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-3">
-                <span className="min-w-0 flex-1 text-sm">
-                  <span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}.</span>
-                  {p.title}
-                  {p.link && (
-                    <a href={/^https?:/.test(p.link) ? p.link : `https://doi.org/${p.link}`} target="_blank" rel="noreferrer" className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline">
-                      <Link2 className="size-3" /> {p.link}
-                    </a>
-                  )}
-                </span>
-                {p.file && <DocLink path={p.file} label="PDF" href={docHref} />}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {filled.length > 0 && (
-        <Card>
-          <CardHeader title="Dossier" />
-          <CardBody className="space-y-4">
-            {filled.map((k) => (
-              <div key={k}>
-                <p className="eyebrow mb-1">{DETAIL_LABELS[k].label}</p>
-                {/<[a-z][\s\S]*>/i.test(String(d[k])) ? (
-                  <div className="prose-sm max-w-none overflow-x-auto text-sm text-slate-700 [&_ol]:list-decimal [&_ol]:pl-5 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: d[k] }} />
-                ) : (
-                  <p className="text-sm break-words whitespace-pre-line text-slate-700">{d[k]}</p>
-                )}
-              </div>
-            ))}
-          </CardBody>
-        </Card>
-      )}
+      <PapersCard papers={file.papers} docHref={docHref} />
+      <DossierCard details={file.details} />
 
       <Card>
         <CardHeader title="Trail" description="Every step taken on this file" />
@@ -162,5 +125,55 @@ export function FileView({ file, docHref }: { file: R; docHref: (path: string) =
         </CardBody>
       </Card>
     </div>
+  )
+}
+
+/** The papers listed with the application (title, DOI or link, PDF). */
+export function PapersCard({ papers, docHref }: { papers: Array<R> | undefined; docHref: (path: string) => string }) {
+  if (!papers?.length) return null
+  return (
+    <Card>
+      <CardHeader title={`Papers (${papers.length})`} />
+      <ul className="divide-y">
+        {papers.map((p, i) => (
+          <li key={p.id} className="flex flex-wrap items-start justify-between gap-3 px-5 py-3">
+            <span className="min-w-0 flex-1 text-sm">
+              <span className="mr-2 font-mono text-xs text-muted-foreground">{i + 1}.</span>
+              {p.title}
+              {p.link && (
+                <a href={/^https?:/.test(p.link) ? p.link : `https://doi.org/${p.link}`} target="_blank" rel="noreferrer" className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline">
+                  <Link2 className="size-3" /> {p.link}
+                </a>
+              )}
+            </span>
+            {p.file && <DocLink path={p.file} label="PDF" href={docHref} />}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
+
+/** The senior member's dossier: only the sections they filled in (old-portal answers are rich text). */
+export function DossierCard({ details, skip = [] }: { details: R | null | undefined; skip?: Array<string> }) {
+  const d = (details ?? {}) as R
+  const filled = PROMOTION_DETAIL_FIELDS.filter((k) => d[k] && !skip.includes(k))
+  if (!filled.length) return null
+  return (
+    <Card>
+      <CardHeader title="Dossier" description="As submitted on the promotion form" />
+      <CardBody className="space-y-5">
+        {filled.map((k) => (
+          <div key={k}>
+            <p className="eyebrow mb-1">{DETAIL_LABELS[k].label}</p>
+            {/<[a-z][\s\S]*>/i.test(String(d[k])) ? (
+              <div className="prose-sm max-w-none overflow-x-auto text-sm text-slate-700 [&_ol]:list-decimal [&_ol]:pl-5 [&_table]:w-full [&_td]:border [&_td]:px-2 [&_td]:py-1 [&_ul]:list-disc [&_ul]:pl-5" dangerouslySetInnerHTML={{ __html: d[k] }} />
+            ) : (
+              <p className="text-sm break-words whitespace-pre-line text-slate-700">{d[k]}</p>
+            )}
+          </div>
+        ))}
+      </CardBody>
+    </Card>
   )
 }

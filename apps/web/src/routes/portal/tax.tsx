@@ -27,8 +27,8 @@ function MyTax() {
         description="Your monthly PAYE records (emoluments, reliefs and tax) as filed with the Ghana Revenue Authority."
         actions={
           months.length > 0 && (
-            <Button variant="outline" onClick={() => window.print()}>
-              <Printer /> Print
+            <Button variant="outline" onClick={() => window.open(`/print/gra/${data?.year}`, '_blank')}>
+              <Printer /> Print GRA form
             </Button>
           )
         }

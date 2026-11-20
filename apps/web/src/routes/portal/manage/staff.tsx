@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Users } from 'lucide-react'
+import { FileSpreadsheet, Printer, Users } from 'lucide-react'
 import { api } from '#/lib/api-client'
 import type { Page } from '#/lib/api-client'
 import { date, num } from '#/lib/format'
 import { GROUP_LABELS } from '#/lib/labels'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import { Dialog, DialogContent } from '#/components/ui/dialog'
 import { Combobox } from '#/components/admin/combobox'
 import { DataTable, FilterSelect, Pagination, SearchInput, Toolbar } from '#/components/admin/data-table'
@@ -28,10 +29,21 @@ function StaffManager() {
   const scope = useQuery({ queryKey: ['portal', 'manage-scope'], queryFn: () => api.get<R>('/portal/manage/scope') })
   const { data, isLoading } = useQuery({
     queryKey: ['portal', 'manage-staff', { q, unit, group, tab, page }],
-    queryFn: () => api.get<Page<R> & { onLeave: number }>('/portal/manage/staff', { q, unit: unit ?? undefined, group, onLeave: tab === 'leave' ? '1' : undefined, page }),
+    queryFn: () => api.get<Page<R> & { onLeave: number; teamCount: number }>('/portal/manage/staff', { q, unit: unit ?? undefined, group, onLeave: tab === 'leave' ? '1' : undefined, page }),
     placeholderData: keepPreviousData,
   })
   const reset = () => setPage(1)
+  // The printed list and the Excel export carry the same filters as the screen, but every page of it.
+  const filterParams = () => {
+    const params = new URLSearchParams()
+    if (q.trim()) params.set('q', q.trim())
+    if (unit) params.set('unit', String(unit))
+    if (group) params.set('group', group)
+    if (tab === 'leave') params.set('onLeave', '1')
+    return params.size ? `?${params}` : ''
+  }
+  const printList = () => window.open(`/print/team${filterParams()}`, '_blank')
+  const exportList = () => window.location.assign(`/api/portal/manage/staff/export${filterParams()}`)
   return (
     <>
       <StaffDialog staffNo={open} onClose={() => setOpen(null)} />
@@ -39,12 +51,23 @@ function StaffManager() {
         eyebrow="Management services"
         title="Staff manager"
         description={scope.data ? `${scope.data.headTitle ?? 'Approver'} · ${(scope.data.heads as Array<R>).map((h) => h.unitName).join(', ') || 'named approver'}` : undefined}
+        actions={
+          <>
+            <Button variant="outline" onClick={exportList} disabled={!data?.total}>
+              <FileSpreadsheet /> Export list
+            </Button>
+            <Button variant="outline" onClick={printList} disabled={!data?.total}>
+              <Printer /> Print list
+            </Button>
+          </>
+        }
       />
       <StatusTabs
         value={tab}
         onChange={(t) => (setTab(t), reset())}
         options={[{ value: 'leave', label: 'On leave now' }]}
-        counts={data ? [{ status: '', count: data.total }, { status: 'leave', count: data.onLeave }] : undefined}
+        counts={data ? [{ status: 'leave', count: data.onLeave }] : undefined}
+        total={data?.teamCount}
       />
       <Toolbar>
         <SearchInput value={q} onChange={(v) => (setQ(v), reset())} placeholder="Name or staff number…" />

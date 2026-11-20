@@ -13,6 +13,7 @@
     "typecheck": "turbo run typecheck",
     "db:migrate": "npm run db:migrate -w packages/db",
     "db:seed": "npm run db:seed -w packages/db",
+    "db:import-payslips": "npm run db:import-payslips -w packages/db --",
     "db:setup": "npm run db:migrate && npm run db:seed"
   },
   "devDependencies": {

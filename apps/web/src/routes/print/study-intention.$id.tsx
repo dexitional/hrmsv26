@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
 import { STUDY_STAGES } from '@hrms/db/types'
 import { api, errorMessage } from '#/lib/api-client'
 import { date, dateTime } from '#/lib/format'
@@ -7,15 +8,25 @@ import { statusLabel } from '#/lib/labels'
 import { PrintPage, PrintParticulars, PrintSection, PrintTable } from '#/components/print/sheet'
 
 export const Route = createFileRoute('/print/study-intention/$id')({
+  // ?from=portal: the staff member's own; ?from=manage: a head's team member (staff portal).
+  validateSearch: z.object({ from: z.enum(['portal', 'manage']).optional() }),
   head: () => ({ meta: [{ title: 'Intention to pursue further studies · UCC HRMS' }] }),
   component: PrintIntention,
 })
 
 function PrintIntention() {
   const { id } = Route.useParams()
-  const { data: a, isLoading, error } = useQuery({ queryKey: ['study-intention', id], queryFn: () => api.get<Record<string, any>>(`/study/intentions/${id}`) })
+  const { from } = Route.useSearch()
+  const endpoint = from === 'portal' ? `/portal/study/intentions/${id}` : from === 'manage' ? `/portal/manage/study/${id}` : `/study/intentions/${id}`
+  const { data: a, isLoading, error } = useQuery({ queryKey: ['study-intention', id, from ?? 'admin'], queryFn: () => api.get<Record<string, any>>(endpoint) })
   return (
-    <PrintPage title="Intention to Pursue Further Studies" subtitle={a ? `Application #${a.id} · ${a.stageLabel ?? STUDY_STAGES[a.appstatus]}` : undefined} loading={isLoading} error={error ? errorMessage(error) : null}>
+    <PrintPage
+      title="Intention to Pursue Further Studies"
+      subtitle={a ? `Application #${a.id} · ${a.stageLabel ?? STUDY_STAGES[a.appstatus]}` : undefined}
+      loading={isLoading}
+      error={error ? errorMessage(error) : null}
+      backTo={from === 'portal' ? '/portal/study' : from === 'manage' ? '/portal/manage/study' : '/admin/study'}
+    >
       {a && (
         <>
           <PrintSection>A. Particulars of applicant</PrintSection>

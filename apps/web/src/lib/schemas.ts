@@ -733,7 +733,11 @@ export const promotionApplySchema = z
     appCv: opt(500),
     papersFile: opt(500),
     papers: z.array(paperSchema).max(80).default([]),
-    details: z.object(Object.fromEntries(PROMOTION_DETAIL_FIELDS.map((f) => [f, opt(10_000)])) as Record<(typeof PROMOTION_DETAIL_FIELDS)[number], ReturnType<typeof opt>>).partial().default({}),
+    // Dossier answers are rich text (HTML), so allow room for the markup.
+    details: z.object(Object.fromEntries(PROMOTION_DETAIL_FIELDS.map((f) => [f, opt(60_000)])) as Record<(typeof PROMOTION_DETAIL_FIELDS)[number], ReturnType<typeof opt>>).partial().default({}),
+    /** Senior members' promotion form: signature image and the date signed (legacy promotion_data). */
+    signature: opt(500),
+    subDate: optDate,
     /** false saves a draft (senior members) */
     submit: z.boolean().default(true),
   })
@@ -756,7 +760,8 @@ export const promotionResubmitSchema = z.object({
 
 export const portalPromotionActionSchema = z
   .object({
-    action: z.enum(['recommend', 'not_recommend', 'return', 'reverse']),
+    // reverse: back to the previous level (14); reverse_applicant: back to the previous level and the applicant (13).
+    action: z.enum(['recommend', 'not_recommend', 'return', 'reverse', 'reverse_applicant']),
     comment: req(2000, 'Write your comment'),
     returnWhat: z.coerce.number().int().optional(),
     document: opt(500),
@@ -764,4 +769,101 @@ export const portalPromotionActionSchema = z
   .superRefine((v, ctx) => {
     if (v.action === 'return' && ![8, 9, 10, 11].includes(Number(v.returnWhat)))
       ctx.addIssue({ code: 'custom', path: ['returnWhat'], message: 'Choose what the applicant must send again' })
+    // As the old portal required: a recommendation either way comes with the signed endorsement (PDF).
+    if ((v.action === 'recommend' || v.action === 'not_recommend') && !v.document)
+      ctx.addIssue({ code: 'custom', path: ['document'], message: 'Upload the signed endorsement document (PDF)' })
   })
+
+// ---------------------------------------------------------------- Payslips
+
+const payslipPin = z.string().regex(/^\d{4}$/, 'Enter 4 digits')
+
+/** Setting (or changing) the 4-digit PIN that unlocks payslips in the staff portal. */
+export const payslipPinSchema = z
+  .object({
+    current: z.preprocess(emptyToNull, payslipPin.nullable()).default(null),
+    pin: payslipPin,
+    confirm: payslipPin,
+  })
+  .superRefine((v, ctx) => {
+    if (v.pin !== v.confirm) ctx.addIssue({ code: 'custom', path: ['confirm'], message: 'The two PINs do not match' })
+    if (/^(\d)\1{3}$/.test(v.pin) || ['1234', '4321', '0123', '9876'].includes(v.pin))
+      ctx.addIssue({ code: 'custom', path: ['pin'], message: 'Choose a PIN that is harder to guess' })
+  })
+
+export const payslipUnlockSchema = z.object({ pin: payslipPin })
+
+/** Admin → Staff → Switch Access: the staff member whose portal to use. */
+export const switchAccessSchema = z.object({ staffNo })
+
+// ---------------------------------------------------------------- Academic advisers
+
+export const ADVISER_LEVELS = [100, 200, 300, 400] as const
+
+/** A head nominating (or changing) an academic adviser for a programme and level (legacy academic_advisers). */
+export const adviserNominationSchema = z.object({
+  staffNo,
+  progid: z.string().trim().min(1, 'Choose the programme').max(20),
+  level: z.coerce.number().refine((v) => (ADVISER_LEVELS as ReadonlyArray<number>).includes(v), 'Choose the level'),
+})
+
+// ---------------------------------------------------------------- Operational plans
+
+export const PLAN_STATUSES = ['Not Started', 'On Hold', 'Defered', 'Discontinued', 'In Progress', 'Completed'] as const
+
+/**
+ * A unit's operational plan, as the old portal's form had it: the objective
+ * (with budget, targets, risks, responsibility and means of verification),
+ * its output, outcome and impact, the key activity, and the review.
+ */
+export const operationalPlanSchema = z.object({
+  unitId: id('Choose the unit'),
+  projectSummary: req(5000, 'Describe the objective'),
+  performanceIndicators: req(5000, 'Give the performance indicators'),
+  ucspLink: req(200, 'Give the link to the UCSP, e.g. UCSP 5.2'),
+  bEstimated: opt(100),
+  bActual: opt(100),
+  riskAssump: opt(5000),
+  responsibility: opt(200),
+  tEstimated: opt(100),
+  tActual: opt(100),
+  sourcesMeans: opt(255),
+  outputSummary: req(5000, 'Describe the output'),
+  outputIndicators: req(5000, 'Give the output indicators'),
+  outcomeSummary: req(5000, 'Describe the outcome'),
+  outcomeIndicators: req(5000, 'Give the outcome indicators'),
+  impactSummary: req(5000, 'Describe the impact'),
+  impactIndicators: req(5000, 'Give the impact indicators'),
+  activitySummary: opt(5000),
+  activityIndicators: opt(5000),
+  activityBEstimated: opt(100),
+  activityBActual: opt(100),
+  activityTEstimated: opt(100),
+  activityTActual: opt(100),
+  opportunities: opt(5000),
+  challenges: opt(5000),
+  actionTaken: opt(5000),
+  remarks: opt(5000),
+  rStatus: optEnum(PLAN_STATUSES),
+})
+
+// ---------------------------------------------------------------- Procurement
+
+const money = (msg: string) => z.coerce.number({ error: msg }).min(0, msg).max(100_000_000)
+
+/** A head's procurement request (legacy procurement.request + request_breakdown): items, then save or submit. */
+export const procurementRequestSchema = z.object({
+  unitId: id('Choose the unit'),
+  items: z
+    .array(
+      z.object({
+        categoryId: id('Choose the item category'),
+        description: req(2000, 'Describe the item'),
+        quantity: z.coerce.number({ error: 'Enter the quantity' }).int('Whole numbers only').min(1, 'Enter the quantity').max(1_000_000),
+        unitPrice: money('Enter the unit price'),
+      }),
+    )
+    .min(1, 'Add at least one item')
+    .max(100),
+  submit: z.boolean().default(false),
+})

@@ -10,6 +10,10 @@ export function PrintPage({
   loading,
   error,
   landscape,
+  bare,
+  backTo = '/admin',
+  sheetClassName,
+  sheetStyle,
   children,
 }: {
   title: string
@@ -17,6 +21,13 @@ export function PrintPage({
   loading?: boolean
   error?: string | null
   landscape?: boolean
+  /** A form with its own heading and footer (e.g. the GRA tax form): no UCC letterhead, title or generated-on line. */
+  bare?: boolean
+  /** Where the "not available" message links back to. */
+  backTo?: string
+  /** Extra class and style for the sheet itself (e.g. a paper background). */
+  sheetClassName?: string
+  sheetStyle?: React.CSSProperties
   children?: React.ReactNode
 }) {
   // On screens narrower than the A4 sheet, shrink the preview to fit
@@ -58,29 +69,35 @@ export function PrintPage({
         <div className="mx-auto max-w-md rounded-2xl bg-white p-8 text-center shadow">
           <p className="font-semibold">This document is not available.</p>
           <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-          <Link to="/admin" className="mt-4 inline-block text-sm text-primary underline">
+          <Link to={backTo} className="mt-4 inline-block text-sm text-primary underline">
             Back to the dashboard
           </Link>
         </div>
       ) : (
-        <article style={{ zoom }} className={cn('print-sheet shadow-xl', landscape && 'print-landscape')}>
-          <header className="flex items-center gap-4 border-b-[3px] border-double border-black pb-3">
-            <img src="/ucc-logo.png" alt="University of Cape Coast" className="h-[20mm] w-auto" />
-            <div className="flex-1">
-              <p className="text-[14pt] font-bold tracking-wide">UNIVERSITY OF CAPE COAST</p>
-              <p className="text-[11pt] font-bold">DIRECTORATE OF HUMAN RESOURCE</p>
-              <p className="text-[8.5pt] text-slate-600">Private Mail Bag, University Post Office, Cape Coast, Ghana</p>
-            </div>
-          </header>
-          <div className="mt-4 mb-4 text-center">
-            <h1 className="text-[13pt] leading-tight font-bold uppercase">{title}</h1>
-            {subtitle && <p className="mt-0.5 text-[10pt] italic">{subtitle}</p>}
-          </div>
-          {children}
-          <p className="mt-8 border-t border-dashed border-slate-400 pt-2 text-center font-sans text-[7.5pt] text-slate-500">
-            Generated from the UCC HRMS on{' '}
-            {new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
-          </p>
+        <article style={{ zoom, ...sheetStyle }} className={cn('print-sheet shadow-xl', landscape && 'print-landscape', sheetClassName)}>
+          {bare ? (
+            children
+          ) : (
+            <>
+              <header className="flex items-center gap-4 border-b-[3px] border-double border-black pb-3">
+                <img src="/ucc-logo.png" alt="University of Cape Coast" className="h-[20mm] w-auto" />
+                <div className="flex-1">
+                  <p className="text-[14pt] font-bold tracking-wide">UNIVERSITY OF CAPE COAST</p>
+                  <p className="text-[11pt] font-bold">DIRECTORATE OF HUMAN RESOURCE</p>
+                  <p className="text-[8.5pt] text-slate-600">Private Mail Bag, University Post Office, Cape Coast, Ghana</p>
+                </div>
+              </header>
+              <div className="mt-4 mb-4 text-center">
+                <h1 className="text-[13pt] leading-tight font-bold uppercase">{title}</h1>
+                {subtitle && <p className="mt-0.5 text-[10pt] italic">{subtitle}</p>}
+              </div>
+              {children}
+              <p className="mt-8 border-t border-dashed border-slate-400 pt-2 text-center font-sans text-[7.5pt] text-slate-500">
+                Generated from the UCC HRMS on{' '}
+                {new Date().toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}
+              </p>
+            </>
+          )}
         </article>
       )}
     </div>

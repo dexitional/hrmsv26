@@ -8,7 +8,7 @@ import { Hono } from 'hono'
 import { bankSchema, qualificationSchema, relativeSchema } from '#/lib/schemas'
 import { requirePermission } from '../lib/auth'
 import { audit } from '../lib/audit'
-import { exec, insert, one, parseId, rows, update } from '../lib/db'
+import { exec, insert, one, parseId, rows, update, withTransaction } from '../lib/db'
 import { notFound } from '../lib/errors'
 import { flag, requireStaff } from '../lib/hr'
 import { validate } from '../lib/validate'
@@ -18,14 +18,42 @@ const edit = requirePermission('staff', 'edit')
 const manage = requirePermission('staff', 'manage')
 const staffParam = (v: string | undefined) => Number(v)
 
-/** Next relative code for a staff member: 14023A, 14023B, … 14023Z, 14023AA… */
-async function nextRelativeCode(staffNo: number) {
-  const codes = await rows<{ code: string | null }>('SELECT code FROM staff_rel WHERE staff_no = ?', [staffNo])
-  const suffixes = codes.map((c) => (c.code ?? '').replace(String(staffNo), '')).filter((s) => /^[A-Z]+$/.test(s))
-  const toNum = (s: string) => [...s].reduce((n, ch) => n * 26 + (ch.charCodeAt(0) - 64), 0)
-  const toStr = (n: number): string => (n <= 0 ? '' : toStr(Math.floor((n - 1) / 26)) + String.fromCharCode(65 + ((n - 1) % 26)))
-  const max = Math.max(0, ...suffixes.map(toNum))
-  return `${staffNo}${toStr(max + 1)}`
+/**
+ * Relative codes are the staff number and a letter (14023A, 14023B, … 14023Z,
+ * 14023AA…), handed out in a fixed order: spouses first, then children, then
+ * parents, then every other relative; within each group, in the order they
+ * were recorded. A code is the relative's place in that order, so the whole
+ * family is renumbered whenever a relative is added, removed or changes
+ * relation (most additions just take the next letter; a spouse recorded after
+ * the children moves the children down one letter). Returns the relatives
+ * whose code changed (the new one included).
+ */
+const RELATIVE_GROUP: Record<string, number> = { SPOUSE: 0, CHILD: 1, FATHER: 2, MOTHER: 2 }
+const letters = (n: number): string => (n <= 0 ? '' : letters(Math.floor((n - 1) / 26)) + String.fromCharCode(65 + ((n - 1) % 26)))
+
+async function renumberRelatives(staffNo: number) {
+  return withTransaction(async (conn) => {
+    const family = await rows<{ id: number; relation: string | null; code: string | null; fname: string; lname: string }>(
+      'SELECT id, relation, code, fname, lname FROM staff_rel WHERE staff_no = ? ORDER BY id FOR UPDATE',
+      [staffNo],
+      conn,
+    )
+    const ordered = [...family].sort((a, b) => (RELATIVE_GROUP[a.relation ?? ''] ?? 3) - (RELATIVE_GROUP[b.relation ?? ''] ?? 3) || a.id - b.id)
+    const changed: Array<{ id: number; name: string; from: string | null; to: string }> = []
+    for (const [i, r] of ordered.entries()) {
+      const code = `${staffNo}${letters(i + 1)}`
+      if (r.code === code) continue
+      await exec('UPDATE staff_rel SET code = ? WHERE id = ?', [code, r.id], conn)
+      changed.push({ id: r.id, name: `${r.fname} ${r.lname}`, from: r.code || null, to: code })
+    }
+    return changed
+  })
+}
+
+/** "Codes: ADJOA MENSAH 15666B → 15666C; …" for the activity log (only codes that moved, not new ones). */
+const movedCodes = (changed: Awaited<ReturnType<typeof renumberRelatives>>, except?: number) => {
+  const moved = changed.filter((c) => c.from && c.id !== except)
+  return moved.length ? `; codes renumbered: ${moved.map((c) => `${c.name} ${c.from} → ${c.to}`).join(', ')}` : ''
 }
 
 const relativeColumns = (d: ReturnType<typeof relativeSchema.parse>) => ({
@@ -44,7 +72,7 @@ export const listRelatives = (staffNo: number) =>
                 hometown, kin, alive, active, photo, path,
                 TIMESTAMPDIFF(YEAR, NULLIF(dob, '0000-00-00'), CURDATE()) AS age
            FROM staff_rel WHERE staff_no = ?
-          ORDER BY active DESC, FIELD(relation, 'SPOUSE', 'CHILD', 'FATHER', 'MOTHER') = 0, FIELD(relation, 'SPOUSE', 'CHILD', 'FATHER', 'MOTHER'), dob`,
+          ORDER BY CASE relation WHEN 'SPOUSE' THEN 0 WHEN 'CHILD' THEN 1 WHEN 'FATHER' THEN 2 WHEN 'MOTHER' THEN 2 ELSE 3 END, id`,
     [staffNo],
   )
 
@@ -75,28 +103,33 @@ export const staffRecordsRoute = new Hono()
     const staff = await requireStaff(staffParam(c.req.param('staffNo')))
     const data = c.req.valid('json')
     if (data.kin) await exec("UPDATE staff_rel SET kin = '0' WHERE staff_no = ?", [staff.staffNo])
-    const id = await insert('staff_rel', { ...relativeColumns(data), staffNo: staff.staffNo, code: await nextRelativeCode(staff.staffNo) })
-    audit(c.get('user'), 'create', 'staff', staff.staffNo, `Added ${data.relation.toLowerCase()} ${data.fname} ${data.lname} to ${staff.fullName}`)
-    return c.json({ id }, 201)
+    const id = await insert('staff_rel', { ...relativeColumns(data), staffNo: staff.staffNo })
+    const changed = await renumberRelatives(staff.staffNo)
+    const code = changed.find((r) => r.id === id)?.to ?? null
+    audit(c.get('user'), 'create', 'staff', staff.staffNo, `Added ${data.relation.toLowerCase()} ${data.fname} ${data.lname} (${code}) to ${staff.fullName}${movedCodes(changed, id)}`)
+    return c.json({ id, code, renumbered: changed.filter((r) => r.from && r.id !== id).length }, 201)
   })
   .put('/relatives/:id', edit, validate('json', relativeSchema), async (c) => {
     const id = parseId(c.req.param('id'))
     const data = c.req.valid('json')
-    const rel = await one<{ staffNo: number }>('SELECT staff_no FROM staff_rel WHERE id = ?', [id])
+    const rel = await one<{ staffNo: number; relation: string | null; code: string | null }>('SELECT staff_no, relation, code FROM staff_rel WHERE id = ?', [id])
     if (!rel) throw notFound('Relative')
     // One next of kin per staff member.
     if (data.kin) await exec("UPDATE staff_rel SET kin = '0' WHERE staff_no = ? AND id <> ?", [rel.staffNo, id])
     await update('staff_rel', id, relativeColumns(data))
-    audit(c.get('user'), 'update', 'staff', rel.staffNo, `Updated relative ${data.fname} ${data.lname}`)
-    return c.json({ id })
+    // A new relation can move the relative to another group (and so the codes), as can a missing code.
+    const changed = rel.relation !== data.relation || !rel.code ? await renumberRelatives(rel.staffNo) : []
+    audit(c.get('user'), 'update', 'staff', rel.staffNo, `Updated relative ${data.fname} ${data.lname}${movedCodes(changed)}`)
+    return c.json({ id, renumbered: changed.filter((r) => r.from).length })
   })
   .delete('/relatives/:id', manage, async (c) => {
     const id = parseId(c.req.param('id'))
     const rel = await one<{ staffNo: number; fname: string; lname: string }>('SELECT staff_no, fname, lname FROM staff_rel WHERE id = ?', [id])
     if (!rel) throw notFound('Relative')
     await exec('DELETE FROM staff_rel WHERE id = ?', [id])
-    audit(c.get('user'), 'delete', 'staff', rel.staffNo, `Removed relative ${rel.fname} ${rel.lname}`)
-    return c.json({ ok: true })
+    const changed = await renumberRelatives(rel.staffNo)
+    audit(c.get('user'), 'delete', 'staff', rel.staffNo, `Removed relative ${rel.fname} ${rel.lname}${movedCodes(changed)}`)
+    return c.json({ ok: true, renumbered: changed.filter((r) => r.from).length })
   })
 
   // ------------------------------------------------------------ Bank accounts

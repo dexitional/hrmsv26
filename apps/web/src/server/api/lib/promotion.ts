@@ -151,11 +151,14 @@ export async function loadPromotion(id: number) {
 
 type Apply = z.output<typeof promotionApplySchema>
 const cut = (v: string | null | undefined, n: number) => (v ? v.slice(0, n) : null)
-const DETAIL_LIMITS: Record<string, number> = { presentRank: 150, presentRankIfany: 150, prEdate: 20, ppEdate: 20 }
+const DETAIL_LIMITS: Record<string, number> = { presentRank: 150, presentRankIfany: 150, prEdate: 20, ppEdate: 20, areaSpecialization: 2000 }
 const toSnake = (k: string) => k.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
 
+/** Short particulars are plain text; the dossier answers are rich text, cleaned to safe HTML. */
 function detailColumns(details: Apply['details']) {
-  return Object.fromEntries(Object.entries(details).map(([k, v]) => [k, cut(v as string | null, DETAIL_LIMITS[k] ?? 10_000)]))
+  return Object.fromEntries(
+    Object.entries(details).map(([k, v]) => [k, DETAIL_LIMITS[k] ? cut(v as string | null, DETAIL_LIMITS[k]) : cut(cleanHtml(v as string | null), 60_000)]),
+  )
 }
 
 async function writePapers(conn: Parameters<typeof exec>[2], staffNo: number, promoId: number, papers: Apply['papers']) {
@@ -170,6 +173,32 @@ async function writePapers(conn: Parameters<typeof exec>[2], staffNo: number, pr
       cut(p.link, 80),
     ], conn)
   }
+}
+
+/**
+ * The particulars the senior members' promotion form shows (and stores): the
+ * department, the college or directorate above it, contacts, and the present
+ * rank with the date it took effect.
+ */
+export async function applicantParticulars(staffNo: number) {
+  const p = await one<{ dept: string | null; college: string | null; email: string | null; tel: string | null; presentRank: string | null; prEdate: string | null }>(
+    `SELECT u.long_name AS dept, COALESCE(cu.long_name, pu.long_name) AS college, LOWER(TRIM(s.ucc_mail)) AS email, s.phone AS tel,
+            j.title AS present_rank, NULLIF(cp.appoint_date, '0000-00-00') AS pr_edate
+       FROM staff s LEFT JOIN promotion cp ON cp.id = s.promo_id
+       LEFT JOIN unit u ON u.id = COALESCE(cp.unit_id, s.unit_id)
+       LEFT JOIN unit cu ON cu.id = NULLIF(u.college_id, u.id) LEFT JOIN unit pu ON pu.id = NULLIF(u.parent_id, u.id)
+       LEFT JOIN job j ON j.id = COALESCE(cp.job_id, s.job_id)
+      WHERE s.staff_no = ?`,
+    [staffNo],
+  )
+  return p ? { ...p, prEdate: p.prEdate ? String(p.prEdate).slice(0, 10) : null } : null
+}
+
+/** Contract renewal is for senior members; their promotion form needs a signature before it is submitted. */
+export function checkApplicant(me: PortalUser, d: Apply) {
+  const sm = me.staffGroup === 'SM'
+  if (d.type === 1 && !sm) throw new AppError('Contract renewal applications are for senior members.', 403)
+  if (sm && d.type === 0 && d.submit && !d.signature) throw new AppError('Upload your signature (a picture of it) before you submit.', 422)
 }
 
 /** Creates a draft or a submitted application, or (id given) updates a draft. */
@@ -212,11 +241,15 @@ export async function saveApplication(me: PortalUser, d: Apply, draftId: number 
         conn,
       )
     }
+    // As the old form stored them: the department and college names, contacts,
+    // the present rank and its date (prefilled from the record when left empty).
+    const part = await applicantParticulars(me.staffNo)
+    const details = detailColumns(d.details)
     const data = {
       applyType: d.type,
       promoComments: cut(d.kind, 50),
-      dept: cut(current.unitName, 100),
-      college: current.collegeId ? String(current.collegeId) : null,
+      dept: cut(part?.dept ?? current.unitName, 100),
+      college: cut(part?.college, 100),
       email: cut(current.email, 200),
       tel: cut(current.phone, 20),
       fullname: cut(me.fullName, 150),
@@ -224,9 +257,12 @@ export async function saveApplication(me: PortalUser, d: Apply, draftId: number 
       appLetter: d.appLetter,
       appCv: d.appCv,
       papers: d.papersFile,
+      signature: d.signature,
       status: submitting ? 1 : 0,
-      subDate: new Date().toISOString().slice(0, 10),
-      ...detailColumns(d.details),
+      subDate: d.subDate ?? new Date().toISOString().slice(0, 10),
+      ...details,
+      presentRank: details.presentRank ?? cut(part?.presentRank, 150),
+      prEdate: details.prEdate ?? part?.prEdate ?? null,
     }
     const existing = await one<{ id: number }>('SELECT id FROM promotion_data WHERE promo_id = ? ORDER BY id DESC LIMIT 1', [id], conn)
     if (existing) {
@@ -305,7 +341,9 @@ export async function headAction(me: PortalUser, id: number, d: Action) {
   else if (d.action === 'return') ((stage = Number(d.returnWhat)), (label = RETURN_REASONS[stage]!.label), (returned = 1))
   else {
     if (level < 2) throw new AppError('The head of department is the first level; return the form to the applicant instead.', 422)
-    ;(next = level - 1), (stage = 14), (label = 'Reverse to HOD'), (returned = 1)
+    // 14: the previous level looks at it again; 13: the previous level and the applicant (who may resubmit documents).
+    const both = d.action === 'reverse_applicant'
+    ;(next = level - 1), (stage = both ? 13 : 14), (label = both ? 'Reverse to HOD and applicant' : 'Reverse to HOD'), (returned = 1)
   }
   await withTransaction(async (conn) => {
     const done = await exec(

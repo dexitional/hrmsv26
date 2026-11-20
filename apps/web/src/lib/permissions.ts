@@ -28,6 +28,7 @@ export type Module =
   | 'promotions'
   | 'circulars'
   | 'servicedesk'
+  | 'payslips'
   | 'notifications'
   | 'users'
   | 'audit'
@@ -59,6 +60,9 @@ const MATRIX: Record<Module, Partial<Record<UserRole, Access>>> = {
   // Support requests from the staff portal: IT support answers them too.
   servicedesk: { administrator: 'manage', hr_officer: 'manage', it_support: 'manage', viewer: 'view' },
   notifications: { administrator: 'manage', it_support: 'manage', hr_officer: 'view' },
+  // Pay and bank details: HR officers view and import payslips and reset
+  // staff PINs; IT support and viewers have no access.
+  payslips: { administrator: 'manage', hr_officer: 'edit' },
   users: { administrator: 'manage', it_support: 'manage' },
   audit: { administrator: 'view', it_support: 'view', hr_officer: 'view' },
 }
@@ -77,3 +81,6 @@ export function rolesWith(module: Module, level: Access): Array<UserRole> {
 
 /** Who sees everyone's activity log; other roles with audit access see only their own. */
 export const AUDIT_ALL_ROLES: Array<UserRole> = ['administrator', 'it_support']
+
+/** Who may use Switch Access (the staff portal as a staff member sees it): those who manage staff records. */
+export const SWITCH_ACCESS_ROLES: Array<UserRole> = rolesWith('staff', 'manage')

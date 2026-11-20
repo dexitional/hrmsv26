@@ -22,6 +22,7 @@ import { Route as AdminElevationRouteImport } from './routes/admin/elevation'
 import { Route as AdminJobsRouteImport } from './routes/admin/jobs'
 import { Route as AdminLeaveRouteImport } from './routes/admin/leave'
 import { Route as AdminNotificationsRouteImport } from './routes/admin/notifications'
+import { Route as AdminPayslipsRouteImport } from './routes/admin/payslips'
 import { Route as AdminPositionsRouteImport } from './routes/admin/positions'
 import { Route as AdminScalesRouteImport } from './routes/admin/scales'
 import { Route as AdminServiceDeskRouteImport } from './routes/admin/service-desk'
@@ -31,12 +32,15 @@ import { Route as AdminUsersRouteImport } from './routes/admin/users'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as PortalIndexRouteImport } from './routes/portal/index'
 import { Route as PortalAttendanceRouteImport } from './routes/portal/attendance'
+import { Route as PortalDisciplinaryRouteImport } from './routes/portal/disciplinary'
 import { Route as PortalLeaveRouteImport } from './routes/portal/leave'
 import { Route as PortalNotificationsRouteImport } from './routes/portal/notifications'
+import { Route as PortalPayslipsRouteImport } from './routes/portal/payslips'
 import { Route as PortalProfileRouteImport } from './routes/portal/profile'
 import { Route as PortalStudyRouteImport } from './routes/portal/study'
 import { Route as PortalTaxRouteImport } from './routes/portal/tax'
 import { Route as PortalLoginRouteImport } from './routes/portal_.login'
+import { Route as PrintTeamRouteImport } from './routes/print/team'
 import { Route as PrintUnitsRouteImport } from './routes/print/units'
 import { Route as AdminCircularsIndexRouteImport } from './routes/admin/circulars/index'
 import { Route as AdminCircularsNewRouteImport } from './routes/admin/circulars/new'
@@ -51,7 +55,9 @@ import { Route as PortalAppraisalIndexRouteImport } from './routes/portal/apprai
 import { Route as PortalAppraisalSelfRouteImport } from './routes/portal/appraisal/self'
 import { Route as PortalCircularsIndexRouteImport } from './routes/portal/circulars/index'
 import { Route as PortalCircularsIdRouteImport } from './routes/portal/circulars/$id'
+import { Route as PortalManageAdvisersRouteImport } from './routes/portal/manage/advisers'
 import { Route as PortalManageLeaveRouteImport } from './routes/portal/manage/leave'
+import { Route as PortalManagePlansRouteImport } from './routes/portal/manage/plans'
 import { Route as PortalManageProcurementRouteImport } from './routes/portal/manage/procurement'
 import { Route as PortalManageStaffRouteImport } from './routes/portal/manage/staff'
 import { Route as PortalManageStudyRouteImport } from './routes/portal/manage/study'
@@ -62,6 +68,7 @@ import { Route as PortalSupportCategoryRouteImport } from './routes/portal/suppo
 import { Route as PrintContractsKindRouteImport } from './routes/print/contracts.$kind'
 import { Route as PrintDisciplinaryStaffNoRouteImport } from './routes/print/disciplinary.$staffNo'
 import { Route as PrintElevationStaffNoRouteImport } from './routes/print/elevation.$staffNo'
+import { Route as PrintGraYearRouteImport } from './routes/print/gra.$year'
 import { Route as PrintLeaveApplicationIdRouteImport } from './routes/print/leave-application.$id'
 import { Route as PrintLeaveStaffNoRouteImport } from './routes/print/leave.$staffNo'
 import { Route as PrintPositionsStaffNoRouteImport } from './routes/print/positions.$staffNo'
@@ -150,6 +157,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminPayslipsRoute = AdminPayslipsRouteImport.update({
+  id: '/payslips',
+  path: '/payslips',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminPositionsRoute = AdminPositionsRouteImport.update({
   id: '/positions',
   path: '/positions',
@@ -195,6 +207,11 @@ const PortalAttendanceRoute = PortalAttendanceRouteImport.update({
   path: '/attendance',
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PortalDisciplinaryRoute = PortalDisciplinaryRouteImport.update({
+  id: '/disciplinary',
+  path: '/disciplinary',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PortalLeaveRoute = PortalLeaveRouteImport.update({
   id: '/leave',
   path: '/leave',
@@ -203,6 +220,11 @@ const PortalLeaveRoute = PortalLeaveRouteImport.update({
 const PortalNotificationsRoute = PortalNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalPayslipsRoute = PortalPayslipsRouteImport.update({
+  id: '/payslips',
+  path: '/payslips',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalProfileRoute = PortalProfileRouteImport.update({
@@ -223,6 +245,11 @@ const PortalTaxRoute = PortalTaxRouteImport.update({
 const PortalLoginRoute = PortalLoginRouteImport.update({
   id: '/portal_/login',
   path: '/portal/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrintTeamRoute = PrintTeamRouteImport.update({
+  id: '/print/team',
+  path: '/print/team',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrintUnitsRoute = PrintUnitsRouteImport.update({
@@ -295,9 +322,19 @@ const PortalCircularsIdRoute = PortalCircularsIdRouteImport.update({
   path: '/circulars/$id',
   getParentRoute: () => PortalRouteRoute,
 } as any)
+const PortalManageAdvisersRoute = PortalManageAdvisersRouteImport.update({
+  id: '/manage/advisers',
+  path: '/manage/advisers',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
 const PortalManageLeaveRoute = PortalManageLeaveRouteImport.update({
   id: '/manage/leave',
   path: '/manage/leave',
+  getParentRoute: () => PortalRouteRoute,
+} as any)
+const PortalManagePlansRoute = PortalManagePlansRouteImport.update({
+  id: '/manage/plans',
+  path: '/manage/plans',
   getParentRoute: () => PortalRouteRoute,
 } as any)
 const PortalManageProcurementRoute = PortalManageProcurementRouteImport.update({
@@ -349,6 +386,11 @@ const PrintDisciplinaryStaffNoRoute =
 const PrintElevationStaffNoRoute = PrintElevationStaffNoRouteImport.update({
   id: '/print/elevation/$staffNo',
   path: '/print/elevation/$staffNo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrintGraYearRoute = PrintGraYearRouteImport.update({
+  id: '/print/gra/$year',
+  path: '/print/gra/$year',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrintLeaveApplicationIdRoute = PrintLeaveApplicationIdRouteImport.update({
@@ -479,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/leave': typeof AdminLeaveRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/payslips': typeof AdminPayslipsRoute
   '/admin/positions': typeof AdminPositionsRoute
   '/admin/scales': typeof AdminScalesRoute
   '/admin/service-desk': typeof AdminServiceDeskRoute
@@ -487,12 +530,15 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/api/$': typeof ApiSplatRoute
   '/portal/attendance': typeof PortalAttendanceRoute
+  '/portal/disciplinary': typeof PortalDisciplinaryRoute
   '/portal/leave': typeof PortalLeaveRoute
   '/portal/notifications': typeof PortalNotificationsRoute
+  '/portal/payslips': typeof PortalPayslipsRoute
   '/portal/profile': typeof PortalProfileRoute
   '/portal/study': typeof PortalStudyRoute
   '/portal/tax': typeof PortalTaxRoute
   '/portal/login': typeof PortalLoginRoute
+  '/print/team': typeof PrintTeamRoute
   '/print/units': typeof PrintUnitsRoute
   '/admin/': typeof AdminIndexRoute
   '/portal/': typeof PortalIndexRoute
@@ -502,7 +548,9 @@ export interface FileRoutesByFullPath {
   '/admin/staff/new': typeof AdminStaffNewRoute
   '/portal/appraisal/self': typeof PortalAppraisalSelfRouteWithChildren
   '/portal/circulars/$id': typeof PortalCircularsIdRoute
+  '/portal/manage/advisers': typeof PortalManageAdvisersRoute
   '/portal/manage/leave': typeof PortalManageLeaveRoute
+  '/portal/manage/plans': typeof PortalManagePlansRoute
   '/portal/manage/procurement': typeof PortalManageProcurementRoute
   '/portal/manage/staff': typeof PortalManageStaffRoute
   '/portal/manage/study': typeof PortalManageStudyRoute
@@ -512,6 +560,7 @@ export interface FileRoutesByFullPath {
   '/print/contracts/$kind': typeof PrintContractsKindRoute
   '/print/disciplinary/$staffNo': typeof PrintDisciplinaryStaffNoRoute
   '/print/elevation/$staffNo': typeof PrintElevationStaffNoRoute
+  '/print/gra/$year': typeof PrintGraYearRoute
   '/print/leave-application/$id': typeof PrintLeaveApplicationIdRoute
   '/print/leave/$staffNo': typeof PrintLeaveStaffNoRoute
   '/print/positions/$staffNo': typeof PrintPositionsStaffNoRoute
@@ -554,6 +603,7 @@ export interface FileRoutesByTo {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/leave': typeof AdminLeaveRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/payslips': typeof AdminPayslipsRoute
   '/admin/positions': typeof AdminPositionsRoute
   '/admin/scales': typeof AdminScalesRoute
   '/admin/service-desk': typeof AdminServiceDeskRoute
@@ -562,12 +612,15 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/api/$': typeof ApiSplatRoute
   '/portal/attendance': typeof PortalAttendanceRoute
+  '/portal/disciplinary': typeof PortalDisciplinaryRoute
   '/portal/leave': typeof PortalLeaveRoute
   '/portal/notifications': typeof PortalNotificationsRoute
+  '/portal/payslips': typeof PortalPayslipsRoute
   '/portal/profile': typeof PortalProfileRoute
   '/portal/study': typeof PortalStudyRoute
   '/portal/tax': typeof PortalTaxRoute
   '/portal/login': typeof PortalLoginRoute
+  '/print/team': typeof PrintTeamRoute
   '/print/units': typeof PrintUnitsRoute
   '/admin': typeof AdminIndexRoute
   '/portal': typeof PortalIndexRoute
@@ -577,7 +630,9 @@ export interface FileRoutesByTo {
   '/admin/staff/new': typeof AdminStaffNewRoute
   '/portal/appraisal/self': typeof PortalAppraisalSelfRouteWithChildren
   '/portal/circulars/$id': typeof PortalCircularsIdRoute
+  '/portal/manage/advisers': typeof PortalManageAdvisersRoute
   '/portal/manage/leave': typeof PortalManageLeaveRoute
+  '/portal/manage/plans': typeof PortalManagePlansRoute
   '/portal/manage/procurement': typeof PortalManageProcurementRoute
   '/portal/manage/staff': typeof PortalManageStaffRoute
   '/portal/manage/study': typeof PortalManageStudyRoute
@@ -587,6 +642,7 @@ export interface FileRoutesByTo {
   '/print/contracts/$kind': typeof PrintContractsKindRoute
   '/print/disciplinary/$staffNo': typeof PrintDisciplinaryStaffNoRoute
   '/print/elevation/$staffNo': typeof PrintElevationStaffNoRoute
+  '/print/gra/$year': typeof PrintGraYearRoute
   '/print/leave-application/$id': typeof PrintLeaveApplicationIdRoute
   '/print/leave/$staffNo': typeof PrintLeaveStaffNoRoute
   '/print/positions/$staffNo': typeof PrintPositionsStaffNoRoute
@@ -632,6 +688,7 @@ export interface FileRoutesById {
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/leave': typeof AdminLeaveRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/payslips': typeof AdminPayslipsRoute
   '/admin/positions': typeof AdminPositionsRoute
   '/admin/scales': typeof AdminScalesRoute
   '/admin/service-desk': typeof AdminServiceDeskRoute
@@ -640,12 +697,15 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/api/$': typeof ApiSplatRoute
   '/portal/attendance': typeof PortalAttendanceRoute
+  '/portal/disciplinary': typeof PortalDisciplinaryRoute
   '/portal/leave': typeof PortalLeaveRoute
   '/portal/notifications': typeof PortalNotificationsRoute
+  '/portal/payslips': typeof PortalPayslipsRoute
   '/portal/profile': typeof PortalProfileRoute
   '/portal/study': typeof PortalStudyRoute
   '/portal/tax': typeof PortalTaxRoute
   '/portal_/login': typeof PortalLoginRoute
+  '/print/team': typeof PrintTeamRoute
   '/print/units': typeof PrintUnitsRoute
   '/admin/': typeof AdminIndexRoute
   '/portal/': typeof PortalIndexRoute
@@ -655,7 +715,9 @@ export interface FileRoutesById {
   '/admin/staff/new': typeof AdminStaffNewRoute
   '/portal/appraisal/self': typeof PortalAppraisalSelfRouteWithChildren
   '/portal/circulars/$id': typeof PortalCircularsIdRoute
+  '/portal/manage/advisers': typeof PortalManageAdvisersRoute
   '/portal/manage/leave': typeof PortalManageLeaveRoute
+  '/portal/manage/plans': typeof PortalManagePlansRoute
   '/portal/manage/procurement': typeof PortalManageProcurementRoute
   '/portal/manage/staff': typeof PortalManageStaffRoute
   '/portal/manage/study': typeof PortalManageStudyRoute
@@ -665,6 +727,7 @@ export interface FileRoutesById {
   '/print/contracts/$kind': typeof PrintContractsKindRoute
   '/print/disciplinary/$staffNo': typeof PrintDisciplinaryStaffNoRoute
   '/print/elevation/$staffNo': typeof PrintElevationStaffNoRoute
+  '/print/gra/$year': typeof PrintGraYearRoute
   '/print/leave-application/$id': typeof PrintLeaveApplicationIdRoute
   '/print/leave/$staffNo': typeof PrintLeaveStaffNoRoute
   '/print/positions/$staffNo': typeof PrintPositionsStaffNoRoute
@@ -711,6 +774,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/leave'
     | '/admin/notifications'
+    | '/admin/payslips'
     | '/admin/positions'
     | '/admin/scales'
     | '/admin/service-desk'
@@ -719,12 +783,15 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/$'
     | '/portal/attendance'
+    | '/portal/disciplinary'
     | '/portal/leave'
     | '/portal/notifications'
+    | '/portal/payslips'
     | '/portal/profile'
     | '/portal/study'
     | '/portal/tax'
     | '/portal/login'
+    | '/print/team'
     | '/print/units'
     | '/admin/'
     | '/portal/'
@@ -734,7 +801,9 @@ export interface FileRouteTypes {
     | '/admin/staff/new'
     | '/portal/appraisal/self'
     | '/portal/circulars/$id'
+    | '/portal/manage/advisers'
     | '/portal/manage/leave'
+    | '/portal/manage/plans'
     | '/portal/manage/procurement'
     | '/portal/manage/staff'
     | '/portal/manage/study'
@@ -744,6 +813,7 @@ export interface FileRouteTypes {
     | '/print/contracts/$kind'
     | '/print/disciplinary/$staffNo'
     | '/print/elevation/$staffNo'
+    | '/print/gra/$year'
     | '/print/leave-application/$id'
     | '/print/leave/$staffNo'
     | '/print/positions/$staffNo'
@@ -786,6 +856,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/leave'
     | '/admin/notifications'
+    | '/admin/payslips'
     | '/admin/positions'
     | '/admin/scales'
     | '/admin/service-desk'
@@ -794,12 +865,15 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/$'
     | '/portal/attendance'
+    | '/portal/disciplinary'
     | '/portal/leave'
     | '/portal/notifications'
+    | '/portal/payslips'
     | '/portal/profile'
     | '/portal/study'
     | '/portal/tax'
     | '/portal/login'
+    | '/print/team'
     | '/print/units'
     | '/admin'
     | '/portal'
@@ -809,7 +883,9 @@ export interface FileRouteTypes {
     | '/admin/staff/new'
     | '/portal/appraisal/self'
     | '/portal/circulars/$id'
+    | '/portal/manage/advisers'
     | '/portal/manage/leave'
+    | '/portal/manage/plans'
     | '/portal/manage/procurement'
     | '/portal/manage/staff'
     | '/portal/manage/study'
@@ -819,6 +895,7 @@ export interface FileRouteTypes {
     | '/print/contracts/$kind'
     | '/print/disciplinary/$staffNo'
     | '/print/elevation/$staffNo'
+    | '/print/gra/$year'
     | '/print/leave-application/$id'
     | '/print/leave/$staffNo'
     | '/print/positions/$staffNo'
@@ -863,6 +940,7 @@ export interface FileRouteTypes {
     | '/admin/jobs'
     | '/admin/leave'
     | '/admin/notifications'
+    | '/admin/payslips'
     | '/admin/positions'
     | '/admin/scales'
     | '/admin/service-desk'
@@ -871,12 +949,15 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/$'
     | '/portal/attendance'
+    | '/portal/disciplinary'
     | '/portal/leave'
     | '/portal/notifications'
+    | '/portal/payslips'
     | '/portal/profile'
     | '/portal/study'
     | '/portal/tax'
     | '/portal_/login'
+    | '/print/team'
     | '/print/units'
     | '/admin/'
     | '/portal/'
@@ -886,7 +967,9 @@ export interface FileRouteTypes {
     | '/admin/staff/new'
     | '/portal/appraisal/self'
     | '/portal/circulars/$id'
+    | '/portal/manage/advisers'
     | '/portal/manage/leave'
+    | '/portal/manage/plans'
     | '/portal/manage/procurement'
     | '/portal/manage/staff'
     | '/portal/manage/study'
@@ -896,6 +979,7 @@ export interface FileRouteTypes {
     | '/print/contracts/$kind'
     | '/print/disciplinary/$staffNo'
     | '/print/elevation/$staffNo'
+    | '/print/gra/$year'
     | '/print/leave-application/$id'
     | '/print/leave/$staffNo'
     | '/print/positions/$staffNo'
@@ -935,10 +1019,12 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiSplatRoute: typeof ApiSplatRoute
   PortalLoginRoute: typeof PortalLoginRoute
+  PrintTeamRoute: typeof PrintTeamRoute
   PrintUnitsRoute: typeof PrintUnitsRoute
   PrintContractsKindRoute: typeof PrintContractsKindRoute
   PrintDisciplinaryStaffNoRoute: typeof PrintDisciplinaryStaffNoRoute
   PrintElevationStaffNoRoute: typeof PrintElevationStaffNoRoute
+  PrintGraYearRoute: typeof PrintGraYearRoute
   PrintLeaveApplicationIdRoute: typeof PrintLeaveApplicationIdRoute
   PrintLeaveStaffNoRoute: typeof PrintLeaveStaffNoRoute
   PrintPositionsStaffNoRoute: typeof PrintPositionsStaffNoRoute
@@ -1043,6 +1129,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
+    '/admin/payslips': {
+      id: '/admin/payslips'
+      path: '/payslips'
+      fullPath: '/admin/payslips'
+      preLoaderRoute: typeof AdminPayslipsRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/positions': {
       id: '/admin/positions'
       path: '/positions'
@@ -1106,6 +1199,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalAttendanceRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    '/portal/disciplinary': {
+      id: '/portal/disciplinary'
+      path: '/disciplinary'
+      fullPath: '/portal/disciplinary'
+      preLoaderRoute: typeof PortalDisciplinaryRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/portal/leave': {
       id: '/portal/leave'
       path: '/leave'
@@ -1118,6 +1218,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/portal/notifications'
       preLoaderRoute: typeof PortalNotificationsRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/payslips': {
+      id: '/portal/payslips'
+      path: '/payslips'
+      fullPath: '/portal/payslips'
+      preLoaderRoute: typeof PortalPayslipsRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/profile': {
@@ -1146,6 +1253,13 @@ declare module '@tanstack/react-router' {
       path: '/portal/login'
       fullPath: '/portal/login'
       preLoaderRoute: typeof PortalLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/print/team': {
+      id: '/print/team'
+      path: '/print/team'
+      fullPath: '/print/team'
+      preLoaderRoute: typeof PrintTeamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/print/units': {
@@ -1246,11 +1360,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PortalCircularsIdRouteImport
       parentRoute: typeof PortalRouteRoute
     }
+    '/portal/manage/advisers': {
+      id: '/portal/manage/advisers'
+      path: '/manage/advisers'
+      fullPath: '/portal/manage/advisers'
+      preLoaderRoute: typeof PortalManageAdvisersRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
     '/portal/manage/leave': {
       id: '/portal/manage/leave'
       path: '/manage/leave'
       fullPath: '/portal/manage/leave'
       preLoaderRoute: typeof PortalManageLeaveRouteImport
+      parentRoute: typeof PortalRouteRoute
+    }
+    '/portal/manage/plans': {
+      id: '/portal/manage/plans'
+      path: '/manage/plans'
+      fullPath: '/portal/manage/plans'
+      preLoaderRoute: typeof PortalManagePlansRouteImport
       parentRoute: typeof PortalRouteRoute
     }
     '/portal/manage/procurement': {
@@ -1321,6 +1449,13 @@ declare module '@tanstack/react-router' {
       path: '/print/elevation/$staffNo'
       fullPath: '/print/elevation/$staffNo'
       preLoaderRoute: typeof PrintElevationStaffNoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/print/gra/$year': {
+      id: '/print/gra/$year'
+      path: '/print/gra/$year'
+      fullPath: '/print/gra/$year'
+      preLoaderRoute: typeof PrintGraYearRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/print/leave-application/$id': {
@@ -1489,6 +1624,7 @@ interface AdminRouteRouteChildren {
   AdminJobsRoute: typeof AdminJobsRoute
   AdminLeaveRoute: typeof AdminLeaveRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminPayslipsRoute: typeof AdminPayslipsRoute
   AdminPositionsRoute: typeof AdminPositionsRoute
   AdminScalesRoute: typeof AdminScalesRoute
   AdminServiceDeskRoute: typeof AdminServiceDeskRoute
@@ -1523,6 +1659,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminJobsRoute: AdminJobsRoute,
   AdminLeaveRoute: AdminLeaveRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminPayslipsRoute: AdminPayslipsRoute,
   AdminPositionsRoute: AdminPositionsRoute,
   AdminScalesRoute: AdminScalesRoute,
   AdminServiceDeskRoute: AdminServiceDeskRoute,
@@ -1565,15 +1702,19 @@ const PortalAppraisalSelfRouteWithChildren =
 
 interface PortalRouteRouteChildren {
   PortalAttendanceRoute: typeof PortalAttendanceRoute
+  PortalDisciplinaryRoute: typeof PortalDisciplinaryRoute
   PortalLeaveRoute: typeof PortalLeaveRoute
   PortalNotificationsRoute: typeof PortalNotificationsRoute
+  PortalPayslipsRoute: typeof PortalPayslipsRoute
   PortalProfileRoute: typeof PortalProfileRoute
   PortalStudyRoute: typeof PortalStudyRoute
   PortalTaxRoute: typeof PortalTaxRoute
   PortalIndexRoute: typeof PortalIndexRoute
   PortalAppraisalSelfRoute: typeof PortalAppraisalSelfRouteWithChildren
   PortalCircularsIdRoute: typeof PortalCircularsIdRoute
+  PortalManageAdvisersRoute: typeof PortalManageAdvisersRoute
   PortalManageLeaveRoute: typeof PortalManageLeaveRoute
+  PortalManagePlansRoute: typeof PortalManagePlansRoute
   PortalManageProcurementRoute: typeof PortalManageProcurementRoute
   PortalManageStaffRoute: typeof PortalManageStaffRoute
   PortalManageStudyRoute: typeof PortalManageStudyRoute
@@ -1592,15 +1733,19 @@ interface PortalRouteRouteChildren {
 
 const PortalRouteRouteChildren: PortalRouteRouteChildren = {
   PortalAttendanceRoute: PortalAttendanceRoute,
+  PortalDisciplinaryRoute: PortalDisciplinaryRoute,
   PortalLeaveRoute: PortalLeaveRoute,
   PortalNotificationsRoute: PortalNotificationsRoute,
+  PortalPayslipsRoute: PortalPayslipsRoute,
   PortalProfileRoute: PortalProfileRoute,
   PortalStudyRoute: PortalStudyRoute,
   PortalTaxRoute: PortalTaxRoute,
   PortalIndexRoute: PortalIndexRoute,
   PortalAppraisalSelfRoute: PortalAppraisalSelfRouteWithChildren,
   PortalCircularsIdRoute: PortalCircularsIdRoute,
+  PortalManageAdvisersRoute: PortalManageAdvisersRoute,
   PortalManageLeaveRoute: PortalManageLeaveRoute,
+  PortalManagePlansRoute: PortalManagePlansRoute,
   PortalManageProcurementRoute: PortalManageProcurementRoute,
   PortalManageStaffRoute: PortalManageStaffRoute,
   PortalManageStudyRoute: PortalManageStudyRoute,
@@ -1629,10 +1774,12 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiSplatRoute: ApiSplatRoute,
   PortalLoginRoute: PortalLoginRoute,
+  PrintTeamRoute: PrintTeamRoute,
   PrintUnitsRoute: PrintUnitsRoute,
   PrintContractsKindRoute: PrintContractsKindRoute,
   PrintDisciplinaryStaffNoRoute: PrintDisciplinaryStaffNoRoute,
   PrintElevationStaffNoRoute: PrintElevationStaffNoRoute,
+  PrintGraYearRoute: PrintGraYearRoute,
   PrintLeaveApplicationIdRoute: PrintLeaveApplicationIdRoute,
   PrintLeaveStaffNoRoute: PrintLeaveStaffNoRoute,
   PrintPositionsStaffNoRoute: PrintPositionsStaffNoRoute,

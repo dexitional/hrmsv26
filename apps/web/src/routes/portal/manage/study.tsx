@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { BookOpenCheck } from 'lucide-react'
+import { BookOpenCheck, Printer } from 'lucide-react'
 import { api } from '#/lib/api-client'
 import { date } from '#/lib/format'
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import { DataTable } from '#/components/admin/data-table'
 import { EmptyState, PageHeader, StaffCell } from '#/components/admin/page'
 import { ReadOnlyNote } from '#/components/portal/read-only-note'
@@ -28,6 +29,15 @@ function StudyManager() {
           { header: 'Institution', cell: (r: R) => <span className="block max-w-48 truncate text-xs">{r.studyPlace}</span> },
           { header: 'Starts', cell: (r: R) => date(r.dateCommence) },
           { header: 'Stage', cell: (r: R) => <Badge tone="info">{r.stageLabel}</Badge> },
+          {
+            header: '',
+            align: 'right',
+            cell: (r: R) => (
+              <Button size="sm" variant="outline" onClick={() => window.open(`/print/study-intention/${r.id}?from=manage`, '_blank')}>
+                <Printer /> View / print
+              </Button>
+            ),
+          },
         ]}
       />
     </>

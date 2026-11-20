@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { z } from 'zod'
 import { DISCIPLINARY_ACTIONS } from '@hrms/db/types'
 import { api, errorMessage } from '#/lib/api-client'
 import { date } from '#/lib/format'
@@ -7,19 +8,22 @@ import { GROUP_LABELS, statusLabel } from '#/lib/labels'
 import { PrintPage, PrintParticulars, PrintSection, PrintTable } from '#/components/print/sheet'
 
 export const Route = createFileRoute('/print/disciplinary/$staffNo')({
+  // ?from=portal: the staff member's own record from the staff portal.
+  validateSearch: z.object({ from: z.enum(['portal']).optional() }),
   head: () => ({ meta: [{ title: 'Disciplinary record · UCC HRMS' }] }),
   component: PrintDisciplinary,
 })
 
 function PrintDisciplinary() {
   const { staffNo } = Route.useParams()
+  const { from } = Route.useSearch()
   const { data, isLoading, error } = useQuery({
-    queryKey: ['disciplinary-history', staffNo],
-    queryFn: () => api.get<{ staff: Record<string, any>; records: Array<Record<string, any>> }>(`/disciplinary/history/${staffNo}`),
+    queryKey: ['disciplinary-history', staffNo, from ?? 'admin'],
+    queryFn: () => api.get<{ staff: Record<string, any>; records: Array<Record<string, any>> }>(from === 'portal' ? '/portal/disciplinary' : `/disciplinary/history/${staffNo}`),
   })
   const s = data?.staff
   return (
-    <PrintPage title="Staff Disciplinary Record" subtitle={s?.fullName} loading={isLoading} error={error ? errorMessage(error) : null}>
+    <PrintPage title="Staff Disciplinary Record" subtitle={s?.fullName} loading={isLoading} error={error ? errorMessage(error) : null} backTo={from === 'portal' ? '/portal/disciplinary' : '/admin/disciplinary'}>
       {s && data && (
         <>
           <PrintParticulars

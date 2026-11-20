@@ -1,2 +1,4 @@
 export { closePool, getPool } from './pool'
 export * from './types'
+export { importPayslips, parsePayrollExport } from './payslips'
+export type { PayrollPayslip, PayslipImportResult } from './payslips'

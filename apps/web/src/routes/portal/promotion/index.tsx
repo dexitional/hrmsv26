@@ -26,7 +26,8 @@ function MyPromotion() {
         actions={
           data && (
             <>
-              {data.open.renewal ? null : (
+              {/* Contract renewal is for senior members. */}
+              {!data.canRenew || data.open.renewal ? null : (
                 <Button variant="outline" asChild>
                   <Link to="/portal/promotion/apply" search={{ type: 1 }}>
                     <RefreshCw /> Apply for contract renewal

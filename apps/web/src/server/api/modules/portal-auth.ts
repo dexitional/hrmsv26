@@ -11,17 +11,19 @@
 //   POST /api/portal/auth/verify    { identifier, code }
 //   GET  /api/portal/auth/dev?staffNo=&next=        development only (DEV_LOGIN=true)
 //   POST /api/portal/auth/logout    GET /api/portal/auth/me
-//   POST /api/portal/auth/to-admin  portal → admin (an active admin account with this staff number)
+//   POST /api/portal/auth/to-admin  portal → admin (an active admin account with this staff number; not while switched)
+//   POST /api/portal/auth/switch-back  ends an administrator's switched access
 //   POST /api/auth/to-portal        admin → portal (in modules/auth.ts)
 import { createHash, randomInt, timingSafeEqual } from 'node:crypto'
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { deleteCookie, setCookie } from 'hono/cookie'
 import { z } from 'zod'
-import { PORTAL_COOKIE, PORTAL_TTL_SECONDS } from '#/server/portal-session'
+import { PORTAL_COOKIE, PORTAL_TTL_SECONDS, SWITCH_TTL_SECONDS } from '#/server/portal-session'
 import { getPortalUser, signStaffToken } from '#/server/portal-session-core'
 import { SESSION_COOKIE, SESSION_TTL_SECONDS } from '#/server/session'
 import { signSessionToken } from '#/server/session-core'
+import { audit } from '../lib/audit'
 import { exec, one } from '../lib/db'
 import { AppError } from '../lib/errors'
 import { ACTIVE_IN } from '../lib/hr'
@@ -39,13 +41,14 @@ const googleEnabled = () => Boolean(process.env.GOOGLE_CLIENT_ID && process.env.
 const hash = (staffNo: number, code: string) => createHash('sha256').update(`${staffNo}:${code}:${process.env.SESSION_SECRET ?? ''}`).digest('hex')
 const safeNext = (value: string | undefined) => (value && value.startsWith('/portal') && !value.startsWith('//') ? value.slice(0, 300) : '/portal')
 
-export async function startStaffSession(c: Context, staffNo: number, method: 'google' | 'code' | 'admin' | 'dev') {
-  setCookie(c, PORTAL_COOKIE, await signStaffToken(staffNo), {
+/** `actor`: the administrator using switched access (Admin → Staff → Switch Access). */
+export async function startStaffSession(c: Context, staffNo: number, method: 'google' | 'code' | 'admin' | 'dev' | 'switch', actor?: number) {
+  setCookie(c, PORTAL_COOKIE, await signStaffToken(staffNo, actor), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'Lax',
     path: '/',
-    maxAge: PORTAL_TTL_SECONDS,
+    maxAge: actor ? SWITCH_TTL_SECONDS : PORTAL_TTL_SECONDS,
   })
   void exec('INSERT INTO hrms_staff_logins (staff_no, method, ip) VALUES (?, ?, ?)', [staffNo, method, clientIp(c).slice(0, 64)]).catch(() => undefined)
 }
@@ -147,9 +150,21 @@ export const portalAuthRoute = new Hono()
     return c.json({ user: await portalUser(c) })
   })
 
+  // An administrator ends switched access: the staff session closes and their
+  // own admin session (never touched) carries on.
+  .post('/switch-back', requireStaffUser, async (c) => {
+    const staff = c.get('staff')
+    if (!staff.switchedBy) throw new AppError('This is not a switched session.', 409)
+    deleteCookie(c, PORTAL_COOKIE, { path: '/' })
+    audit({ id: staff.switchedBy.id } as never, 'switch', 'staff', staff.staffNo, `Switched back from the staff portal access of ${staff.fullName} (${staff.staffNo})`)
+    return c.json({ ok: true, to: `/admin/staff/${staff.staffNo}` })
+  })
+
   // HR officers and IT support who are also staff: straight to the admin.
   .post('/to-admin', requireStaffUser, async (c) => {
     const staff = c.get('staff')
+    // Switched access never opens the staff member's own admin account.
+    if (staff.switchedBy) throw new AppError('You are using switched access. Use “Switch back to admin” to return to your own account.', 403)
     const account = await one<{ id: number }>('SELECT id FROM hrms_users WHERE staff_no = ? AND is_active = 1 LIMIT 1', [staff.staffNo])
     if (!account) throw new AppError('You do not have an HRMS admin account.', 403)
     await exec('UPDATE hrms_users SET last_login_at = NOW() WHERE id = ?', [account.id])
